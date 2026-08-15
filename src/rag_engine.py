@@ -1,3 +1,4 @@
+import requests
 from typing import List, Dict, Any
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -6,8 +7,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 
-from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K
-from src.retriever import get_retriever, get_reranker
+from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K, JINA_API_KEY, JINA_RERANK_MODEL
+from src.retriever import get_retriever
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -29,29 +30,24 @@ Sub-queries:"""
 
 decompose_prompt = ChatPromptTemplate.from_template(DECOMPOSE_TEMPLATE)
 
-# Main CoT Answer Generation prompt
-PROMPT_TEMPLATE = """You are a precise, expert question-answering assistant for a university knowledge base.
-Your task is to answer the user's question using ONLY the information in the provided context.
+SYSTEM_PROMPT = """You are an authoritative University Academic & Administrative Policy Assistant.
+Analyze the retrieved context thoroughly to satisfy all constraints in the query.
 
-Instructions:
-1. Read the context carefully and identify every piece of evidence relevant to the question.
-2. Think through each part of the question step-by-step, mapping it to the specific supporting evidence.
-3. Compose a complete, accurate final answer that:
-   - Addresses every sub-part of the question directly.
-   - Includes all exact numbers, percentages, dates, names, course codes, grade points, and policy thresholds found in the context.
-   - Is well-structured and concise — no padding or repetition.
-4. If the required information is not present in the context, respond with exactly:
-   "I don't have enough information in the provided documents to answer this question."
-   Do NOT speculate or infer beyond what the context states.
+Output Format:
+- Provide a direct, complete, and highly specific answer addressing all parts of the question.
+- Do NOT use preamble phrases like 'Based on the context...', 'After reviewing...', or 'Here is my analysis:'.
+- Use exact numbers, policy names, course codes, and dates directly from the retrieved context.
+- If the required information is not in the context, respond with exactly: "I don't have enough information in the provided documents to answer this question." """
 
-Context:
+HUMAN_TEMPLATE = """Context:
 {context}
 
-Question: {question}
+Question: {question}"""
 
-Answer:"""
-
-prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
+prompt = ChatPromptTemplate.from_messages([
+    ("system", SYSTEM_PROMPT),
+    ("human", HUMAN_TEMPLATE),
+])
 
 
 def format_docs(docs: List[Document]) -> str:
@@ -70,11 +66,20 @@ def decompose_query(question: str) -> List[str]:
 def rerank_docs(question: str, docs: List[Document], top_n: int = RERANK_TOP_N) -> List[Document]:
     if not docs:
         return docs
-    cross_encoder = get_reranker()
-    passages = [doc.page_content for doc in docs]
-    scores = list(cross_encoder.rerank(question, passages))
-    ranked = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
-    return [doc for _, doc in ranked[:top_n]]
+    response = requests.post(
+        "https://api.jina.ai/v1/rerank",
+        headers={"Authorization": f"Bearer {JINA_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": JINA_RERANK_MODEL,
+            "query": question,
+            "top_n": top_n,
+            "documents": [doc.page_content for doc in docs],
+        },
+    )
+    results = response.json().get("results", [])
+    if not results:
+        return docs[:top_n]
+    return [docs[r["index"]] for r in results]
 
 
 def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):

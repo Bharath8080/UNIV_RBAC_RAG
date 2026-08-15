@@ -4,14 +4,11 @@ from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Distance, VectorParams, SparseVectorParams
 
-from fastembed.rerank.cross_encoder import TextCrossEncoder
-
-from src.config import QDRANT_PATH, COLLECTION_NAME, EMBED_MODEL, SPARSE_EMBED_MODEL, EMBED_DIM, RERANK_MODEL
+from src.config import QDRANT_PATH, COLLECTION_NAME, EMBED_MODEL, SPARSE_EMBED_MODEL, EMBED_DIM
 
 
 dense_embeddings  = FastEmbedEmbeddings(model_name=EMBED_MODEL)
 sparse_embeddings = FastEmbedSparse(model_name=SPARSE_EMBED_MODEL)
-reranker          = TextCrossEncoder(model_name=RERANK_MODEL)
 
 # Hierarchical RBAC role mappings
 ROLE_TIER_MAPPING: dict[str, list[str]] = {
@@ -70,9 +67,5 @@ def get_retriever(role: str = "public", k: int = 4):
         }
     )
 
-
-def get_reranker() -> TextCrossEncoder:
-    """Returns the shared cross-encoder reranker instance (Xenova/ms-marco-MiniLM-L-6-v2)."""
-    return reranker
 
 

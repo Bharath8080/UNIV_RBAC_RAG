@@ -56,18 +56,10 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 
 ---
 
-### 🧩 4. Query Decomposition + CoT Synthesis (Current Production Pipeline)
+### 🧩 4. Query Decomposition + CoT Synthesis
 *Stage 1 Query Decomposition (Groq LLM breaks multi-hop questions into 2-3 focused sub-queries) $\to$ Stage 2 Multi-Query Hybrid Retrieval (BGE + SPLADE with document deduplication) $\to$ Stage 3 Cross-Encoder Reranking (`ms-marco-MiniLM-L-6-v2`) $\to$ Stage 4 Chain-of-Thought (CoT) Answer Synthesis.*
 
-| Metric | Average Score | Pass Rate | Evaluation Result |
-|:---|:---:|:---:|:---|
-| **Faithfulness** | **0.99** | **98.00%** (49/50) | 🟢 **+5% jump** — CoT step-by-step reasoning grounds every deduction directly in retrieved text |
-| **Answer Relevancy** | **0.95** | **92.00%** (46/50) | 🟢 Complete multi-part answers addressing all sub-conditions |
-| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Perfect retrieval signal-to-noise ratio |
-| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 Sub-query decomposition surfaces hidden cross-paragraph evidence |
-
-#### 🎯 Test Case Outcomes:
-- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **43 / 50 (86.00%)** *(+14% overall gain over baseline)*
+- **Total Test Cases Passed**: **43 / 50 (86.00%)**
 - **Failed Test Cases**: **7 / 50 (14.00%)**
 - **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
 
@@ -80,14 +72,39 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 
 ---
 
+### 🚀 5. Jina Reranker v3.5 + System/Human Prompt Split (Current SOTA Production Pipeline)
+*Query Decomposition $\to$ Hybrid Retrieval ($k=15$) $\to$ **Jina Reranker v3.5 API** ($top\_n=6$) $\to$ Boundary-Aware Paragraph Chunking ($800/200$) $\to$ Direct System/Human Prompt Split with Preamble Suppression.*
+
+| Metric | Average Score | Pass Rate | Evaluation Result |
+|:---|:---:|:---:|:---|
+| **Answer Relevancy** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Preamble suppression eliminated semantic drift completely |
+| **Faithfulness** | **0.98** | **98.00%** (49/50) | 🟢 Flawless factual grounding across multi-page policy and disciplinary documents |
+| **Contextual Precision** | **0.96** | **98.00%** (49/50) | 🟢 Jina Reranker v3.5 prioritizes relevant cross-paragraph context with high fidelity |
+| **Contextual Recall** | **0.96** | **92.00%** (46/50) | 🚀 **+1% score jump** — Expanded top-6 context horizon captures multi-clause policies |
+
+#### 🎯 SOTA Test Case Outcomes:
+- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **44 / 50 (88.00%)** *(+16% overall gain over baseline)*
+- **Failed Test Cases**: **6 / 50 (12.00%)**
+- **RBAC Security & Boundary Isolation**: **36/36 checks passed (100% Isolation Enforced)**
+
+<p align="center">
+  <img src="screenshots/jina_cli.png" alt="Jina Reranker Benchmark CLI" width="90%" />
+</p>
+<p align="center">
+  <img src="screenshots/jina_dash.png" alt="Jina Reranker Confident Dashboard" width="90%" />
+</p>
+
+---
+
 ### 📊 Benchmark Comparison: Evolution Across RAG Stages
 
 | Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
 |---|:---:|:---:|:---:|:---:|:---:|
 | **1. Dense Semantic (Baseline)** | 72.00% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
-| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | **0.98 (96%)** | 0.94 (98%) | 0.95 (92%) |
-| **3. Hybrid + Cross-Encoder Rerank** | 84.00% (42/50) | 0.96 (94%) | 0.97 (96%) | **0.97 (100%)** 🏆 | 0.95 (92%) |
-| **4. Query Decomposition + CoT** | **86.00% (43/50)** 🚀 | **0.99 (98%)** 🚀 | 0.95 (92%) | **0.97 (100%)** 🏆 | **0.95 (92%)** |
+| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | 0.98 (96%) | 0.94 (98%) | 0.95 (92%) |
+| **3. Hybrid + Cross-Encoder Rerank** | 84.00% (42/50) | 0.96 (94%) | 0.97 (96%) | 0.97 (100%) | 0.95 (92%) |
+| **4. Query Decomposition + CoT** | 86.00% (43/50) | **0.99 (98%)** | 0.95 (92%) | **0.97 (100%)** | 0.95 (92%) |
+| **5. Jina Reranker v3.5 + Prompt Split** | **88.00% (44/50)** 🚀 | 0.98 (98%) | **0.97 (100%)** 🏆 | 0.96 (98%) | **0.96 (92%)** 🚀 |
 
 
 
