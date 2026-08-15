@@ -9,20 +9,46 @@ An enterprise-grade, role-based Retrieval-Augmented Generation (RAG) system buil
 
 Evaluations were executed using **DeepEval** with industry production threshold `threshold = 0.70`, judged by Groq LLM (`openai/gpt-oss-120b`).
 
-### 📈 Dense Semantic Search (Baseline)
+### 📈 1. Dense Semantic Search (Baseline)
 *Dense vector embeddings (`sentence-transformers/all-MiniLM-L6-v2`) with cosine similarity, Qdrant payload filtering, and Top-K retrieval ($k=4$).*
 
 | Metric | Average Score | Pass Rate | Evaluation Result |
 |:---|:---:|:---:|:---|
 | **Faithfulness** | **0.99** | **100.00%** (50/50) | 🟢 Flawless factual grounding with zero hallucinations |
 | **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Highly pertinent, direct answers aligned with user intent |
-| **Contextual Recall** | **0.95** | **90.00%** (45/50) | 🟢 Complete capture of multi-part policies, numbers & proofs |
 | **Contextual Precision** | **0.85** | **84.00%** (42/50) | 🟢 Strong signal-to-noise ratio in top-ranked document chunks |
+| **Contextual Recall** | **0.95** | **90.00%** (45/50) | 🟢 Complete capture of multi-part policies, numbers & proofs |
 
-#### 🎯 Test Case Outcomes:
-- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **36 / 50 (72.00%)**
-- **Failed Test Cases (1+ sub-metric below 0.70 threshold)**: **14 / 50 (28.00%)**
+- **Total Test Cases Passed**: **36 / 50 (72.00%)**
+- **Failed Test Cases**: **14 / 50 (28.00%)**
+
+---
+
+### ⚡ 2. Hybrid Search (Dense BGE + Sparse SPLADE)
+*Dense vector embeddings (`BAAI/bge-small-en-v1.5`) + Sparse lexical embeddings (`prithivida/Splade_PP_en_v1`) with Reciprocal Rank Fusion (RRF) and Qdrant RBAC payload filtering ($k=4$).*
+
+| Metric | Average Score | Pass Rate | Evaluation Result |
+|:---|:---:|:---:|:---|
+| **Faithfulness** | **0.96** | **92.00%** (46/50) | 🟢 Strong factual grounding across complex policy queries |
+| **Answer Relevancy** | **0.98** | **96.00%** (48/50) | 🟢 Exceptionally high query intent alignment |
+| **Contextual Precision** | **0.94** | **98.00%** (49/50) | 🚀 **+9% jump** — SPLADE keyword expansion eliminates irrelevant chunks |
+| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 High retrieval recall for exact course IDs and policy names |
+
+#### 🎯 Hybrid Test Case Outcomes:
+- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **39 / 50 (78.00%)** *(+6% overall gain)*
+- **Failed Test Cases**: **11 / 50 (22.00%)**
 - **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
+
+---
+
+### 📊 Benchmark Comparison: Baseline vs. Hybrid
+
+| Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Dense Semantic (Baseline)** | 72.00% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
+| **Hybrid (BGE + SPLADE)** | **78.00% (39/50)** 🚀 | 0.96 (92%) | **0.98 (96%)** | **0.94 (98%)** 🚀 | **0.95 (92%)** |
+
+
 
 
 ---
