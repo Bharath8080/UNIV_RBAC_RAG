@@ -15,6 +15,11 @@ EMBED_DIM   = 384
 # Sparse Embedding (FastEmbed - SPLADE)
 SPARSE_EMBED_MODEL = "prithivida/Splade_PP_en_v1"
 
+# Cross-Encoder Reranker (FastEmbed - MiniLM)
+RERANK_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
+RERANK_TOP_N = 4   # final docs passed to LLM after reranking
+RERANK_FETCH_K = 10  # initial retrieval pool size before reranking
+
 # Chunking (RecursiveCharacterTextSplitter)
 CHUNK_SIZE    = 1000
 CHUNK_OVERLAP = 200

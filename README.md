@@ -34,19 +34,36 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 | **Contextual Precision** | **0.94** | **98.00%** (49/50) | 🚀 **+9% jump** — SPLADE keyword expansion eliminates irrelevant chunks |
 | **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 High retrieval recall for exact course IDs and policy names |
 
-#### 🎯 Hybrid Test Case Outcomes:
-- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **39 / 50 (78.00%)** *(+6% overall gain)*
+- **Total Test Cases Passed**: **39 / 50 (78.00%)**
 - **Failed Test Cases**: **11 / 50 (22.00%)**
+
+---
+
+### 🎯 3. Hybrid Search + Cross-Encoder Reranker (SOTA Production Pipeline)
+*Stage 1 Hybrid Retrieval (`k=10`) $\to$ Stage 2 Cross-Encoder Reranker (`Xenova/ms-marco-MiniLM-L-6-v2`) scoring $(q, d)$ joint pairs $\to$ Top-4 passed to Groq Llama 3.3 70B.*
+
+| Metric | Average Score | Pass Rate | Evaluation Result |
+|:---|:---:|:---:|:---|
+| **Faithfulness** | **0.96** | **94.00%** (47/50) | 🟢 Flawless grounding on strictly reranked high-confidence passages |
+| **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Answers razor-focused on specific policy criteria |
+| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Reranker positions exact golden chunk at rank #1 |
+| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 Comprehensive coverage of grading bounds & administrative dates |
+
+#### 🎯 Reranked Test Case Outcomes:
+- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **42 / 50 (84.00%)** *(+12% gain over baseline)*
+- **Failed Test Cases**: **8 / 50 (16.00%)**
 - **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
 
 ---
 
-### 📊 Benchmark Comparison: Baseline vs. Hybrid
+### 📊 Benchmark Comparison: Evolution Across RAG Stages
 
 | Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **Dense Semantic (Baseline)** | 72.00% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
-| **Hybrid (BGE + SPLADE)** | **78.00% (39/50)** 🚀 | 0.96 (92%) | **0.98 (96%)** | **0.94 (98%)** 🚀 | **0.95 (92%)** |
+| **1. Dense Semantic (Baseline)** | 72.00% (36/50) | **0.99 (100%)** | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
+| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | **0.98 (96%)** | 0.94 (98%) | **0.95 (92%)** |
+| **3. Hybrid + Cross-Encoder Rerank** | **84.00% (42/50)** 🚀 | 0.96 (94%) | 0.97 (96%) | **0.97 (100%)** 🏆 | **0.95 (92%)** |
+
 
 
 

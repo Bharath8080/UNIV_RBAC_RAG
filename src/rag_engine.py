@@ -6,8 +6,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 
-from src.config import GROQ_API_KEY, GROQ_MODEL
-from src.retriever import get_retriever
+from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K
+from src.retriever import get_retriever, get_reranker
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -38,7 +38,18 @@ def format_docs(docs: List[Document]) -> str:
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-def get_rag_chain(role: str = "public", k: int = 4):
+def rerank_docs(question: str, docs: List[Document], top_n: int = RERANK_TOP_N) -> List[Document]:
+    """Reranks retrieved docs using Xenova/ms-marco-MiniLM-L-6-v2 cross-encoder."""
+    if not docs:
+        return docs
+    cross_encoder = get_reranker()
+    passages = [doc.page_content for doc in docs]
+    scores = list(cross_encoder.rerank(question, passages))
+    ranked = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
+    return [doc for _, doc in ranked[:top_n]]
+
+
+def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):
     retriever = get_retriever(role=role, k=k)
     return (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -48,11 +59,16 @@ def get_rag_chain(role: str = "public", k: int = 4):
     )
 
 
-def query_rag(question: str, role: str = "public", k: int = 4) -> Dict[str, Any]:
+def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> Dict[str, Any]:
+    # Stage 1: Hybrid retrieval (BGE dense + SPLADE sparse, fetching wider pool)
     retriever = get_retriever(role=role, k=k)
     docs = retriever.invoke(question)
-    context_text = format_docs(docs)
 
+    # Stage 2: Cross-encoder reranking — keep only top RERANK_TOP_N
+    reranked_docs = rerank_docs(question, docs, top_n=RERANK_TOP_N)
+
+    # Stage 3: LLM generation with reranked context
+    context_text = format_docs(reranked_docs)
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
 
@@ -60,6 +76,7 @@ def query_rag(question: str, role: str = "public", k: int = 4) -> Dict[str, Any]
         "question": question,
         "role": role,
         "answer": answer,
-        "docs": docs,
+        "docs": reranked_docs,
     }
+
 
