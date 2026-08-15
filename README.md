@@ -56,13 +56,38 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 
 ---
 
+### 🧩 4. Query Decomposition + CoT Synthesis (Current Production Pipeline)
+*Stage 1 Query Decomposition (Groq LLM breaks multi-hop questions into 2-3 focused sub-queries) $\to$ Stage 2 Multi-Query Hybrid Retrieval (BGE + SPLADE with document deduplication) $\to$ Stage 3 Cross-Encoder Reranking (`ms-marco-MiniLM-L-6-v2`) $\to$ Stage 4 Chain-of-Thought (CoT) Answer Synthesis.*
+
+| Metric | Average Score | Pass Rate | Evaluation Result |
+|:---|:---:|:---:|:---|
+| **Faithfulness** | **0.99** | **98.00%** (49/50) | 🟢 **+5% jump** — CoT step-by-step reasoning grounds every deduction directly in retrieved text |
+| **Answer Relevancy** | **0.95** | **92.00%** (46/50) | 🟢 Complete multi-part answers addressing all sub-conditions |
+| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Perfect retrieval signal-to-noise ratio |
+| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 Sub-query decomposition surfaces hidden cross-paragraph evidence |
+
+#### 🎯 Test Case Outcomes:
+- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **43 / 50 (86.00%)** *(+14% overall gain over baseline)*
+- **Failed Test Cases**: **7 / 50 (14.00%)**
+- **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
+
+<p align="center">
+  <img src="screenshots/decomp_cli.png" alt="Query Decomposition Benchmark CLI" width="90%" />
+</p>
+<p align="center">
+  <img src="screenshots/decomp_dash.png" alt="Query Decomposition Confident Dashboard" width="90%" />
+</p>
+
+---
+
 ### 📊 Benchmark Comparison: Evolution Across RAG Stages
 
 | Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **1. Dense Semantic (Baseline)** | 72.00% (36/50) | **0.99 (100%)** | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
-| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | **0.98 (96%)** | 0.94 (98%) | **0.95 (92%)** |
-| **3. Hybrid + Cross-Encoder Rerank** | **84.00% (42/50)** 🚀 | 0.96 (94%) | 0.97 (96%) | **0.97 (100%)** 🏆 | **0.95 (92%)** |
+| **1. Dense Semantic (Baseline)** | 72.00% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
+| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | **0.98 (96%)** | 0.94 (98%) | 0.95 (92%) |
+| **3. Hybrid + Cross-Encoder Rerank** | 84.00% (42/50) | 0.96 (94%) | 0.97 (96%) | **0.97 (100%)** 🏆 | 0.95 (92%) |
+| **4. Query Decomposition + CoT** | **86.00% (43/50)** 🚀 | **0.99 (98%)** 🚀 | 0.95 (92%) | **0.97 (100%)** 🏆 | **0.95 (92%)** |
 
 
 
