@@ -190,12 +190,12 @@ curl -X POST http://127.0.0.1:8000/query \
   }'
 ```
 
-#### Example: Dean Query (Confidential Strategic Plans)
+#### Example: Dean Query (Confidential Dossiers & Strategic Plans)
 ```bash
 curl -X POST http://127.0.0.1:8000/query \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "What were the committee findings for Dr. Elena Marsh tenure review?",
+    "question": "What research and teaching achievements led to the tenure recommendation for Dr. Elena Marsh?",
     "role": "dean",
     "k": 4
   }'
