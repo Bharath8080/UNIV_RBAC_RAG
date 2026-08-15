@@ -1,0 +1,73 @@
+# ==============================================================================
+# .gitignore — rbac-hr-enterprise-rag
+# ==============================================================================
+
+# ── Secrets & Environment Variables ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python Virtual Environments ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+__pypackages__/
+
+# ── Python Bytecode & Caches ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ── Testing & Evaluation Framework Caches ────────────────────────────────────
+.deepeval/
+.deepeval_cache/
+.confident/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+
+# ── Vector DB & Local Storage ─────────────────────────────────────────────────
+qdrant_db/
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Logs & Debugging ─────────────────────────────────────────────────────────
+*.log
+logs/
+*.tmp
+*.temp
+
+# ── IDE & Operating System Specific ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,353 @@
+[
+  {
+    "question": "I missed a few weeks of classes because I was hospitalized. What's the process for getting my attendance shortage condoned, and what minimum percentage do I still need to have?",
+    "expected_output": "Attendance condonation is permitted only for documented hospitalization confirmed by the University Chief Medical Officer, institutional duty, or AICTE-recognized national competitive exams. It applies to students with attendance between 65% and 74%, requiring medical documentation submitted within 5 working days of resuming classes. Students with attendance below 50% receive a mandatory 'Detained' (DE) grade and must repeat the course.",
+    "source_doc": "campus_policies_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "Are students allowed to use tools like ChatGPT or GitHub Copilot for their homework assignments under the new university policy?",
+    "expected_output": "Under the August 2025 Generative AI policy, using LLMs or generative AI tools for graded coursework is strictly prohibited unless explicitly authorized by the instructor in the syllabus. When authorized, students must include an 'AI Usage Appendix' detailing prompts, tool model/version, output used, and student modifications. Core analysis, algorithms, and thesis work must be the student's own intellectual effort, and unverified AI content flagged above 20% by detection tools triggers mandatory review.",
+    "source_doc": "campus_policies_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the rules and deadlines for lodging a formal grade appeal if I think my final marks were calculated unfairly?",
+    "expected_output": "Grade appeals follow a three-stage procedure: Stage 1 is an informal review with the course instructor within 5 working days of grade publication (instructor responds in 3 days); Stage 2 is a formal petition to the Head of Department within 10 working days of Stage 1, reviewed by a three-member faculty committee (7 working days determination); Stage 3 is a final institutional appeal to the five-member Standing Academic Appeals Board within 15 working days of Stage 2, whose decision is final and binding.",
+    "source_doc": "campus_policies_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What is the One-Offer Policy during campus placements, and what constitutes a Tier-1 offer?",
+    "expected_output": "The One-Offer Policy mandates that any student who accepts a Tier-1 placement offer with a CTC greater than Rs. 15 Lakhs per annum is excluded from appearing in subsequent campus recruitment drives to ensure equitable opportunity distribution. Dream offers (>Rs. 25 LPA) allow exception subject to written approval from the Head of Department.",
+    "source_doc": "campus_policies_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "When is the last day I can drop a course in the Fall 2025 semester without getting a failing grade on my transcript?",
+    "expected_output": "The Course Withdrawal Deadline for the Monsoon Term (Odd Semester) 2025 is November 7, 2025 (Week 14), allowing students to withdraw with a neutral 'W' notation on the official transcript. Tuition refund follows the 50% refund rule applicable after the 30-day census cutoff.",
+    "source_doc": "academic_calendar_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the dates for the End-Semester Theory Examinations in the Fall 2025 semester, and when are hall tickets issued?",
+    "expected_output": "The End-Semester Theory Examinations for the Monsoon Term 2025 run from December 4 to December 18, 2025 across all slots. Hall tickets are issued via the Student Information System (SIS) portal 5 days prior to the start of examinations, provided all Bursar and Library holds are cleared.",
+    "source_doc": "academic_calendar_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "How many courses and credits can a student take during the Summer Supplementary Term, and what is the tuition fee?",
+    "expected_output": "During the 6-week Summer/Supplementary Term (June 8 – July 18, 2026), students carrying backlog theory courses may register for a maximum of 2 courses (up to 8 credits total). Summer classes meet daily for 3-hour sessions to fulfill the 45-lecture contact requirement, and tuition is billed at Rs. 4,500 per credit.",
+    "source_doc": "academic_calendar_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the rules regarding academic work during the 5-day Reading Period before final exams?",
+    "expected_output": "During the 5-day Reading Period (November 29 – December 3, 2025), no supplementary lectures, assignment submissions, project reviews, or surprise quizzes may be scheduled by faculty. The Central Library and Digital Learning Center operate 24 hours daily with enhanced Wi-Fi and exam support staff.",
+    "source_doc": "academic_calendar_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the total credit requirements for a B.Tech in CSE and how are they distributed across categories?",
+    "expected_output": "The B.Tech in CSE requires a minimum of 160 academic credits structured under the Choice-Based Credit System (CBCS): Basic Sciences (BSC — 24 credits), Engineering Sciences (ESC — 20 credits), Humanities & Social Sciences (HSMC — 12 credits), Professional Core Courses (PCC — 64 credits across 16 courses), Professional Electives (PEC — 20 credits), Open Electives (OEC — 8 credits), and Project Work, Internships & Seminars (PROJ — 12 credits).",
+    "source_doc": "course_catalog.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What topics are covered in the CS340 Operating Systems Architecture course?",
+    "expected_output": "CS340 covers: (1) Process management, PCB, context switching, CPU scheduling (FCFS, SJF, RR, MLFQ), and real-time scheduling; (2) Process synchronization, Peterson's algorithm, hardware atomics, semaphores, monitors, classical synchronization problems, and deadlock handling (Banker's algorithm, wait-for graphs); (3) Memory management, paging, TLBs, multi-level page tables, virtual memory demand paging, page replacement (FIFO, LRU, Clock); (4) File systems (VFS, inode structure, allocation, journaling) and disk scheduling; (5) Security, RBAC, hypervisor virtualization (Type-1/Type-2), and container isolation via Linux namespaces and cgroups.",
+    "source_doc": "course_catalog.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the requirements for a student to petition for a credit overload beyond the standard 24 credits?",
+    "expected_output": "Students maintaining a cumulative CGPA of 8.50 or higher with zero active backlogs may petition for a Credit Overload of up to 28 credits per semester to pursue the Honors Research stream or dual elective specializations.",
+    "source_doc": "course_catalog.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What elective courses are offered under the Systems and Cybersecurity Track in the CSE department?",
+    "expected_output": "Track B (Systems & Cybersecurity) offers: CS511 Network Security & Cryptography (AES-256, RSA, ECC, TLS 1.3, zero-trust), CS512 Blockchain & Decentralized Systems (PoW, PoS, smart contracts, DeFi), and CS513 Penetration Testing & Cyber Forensics (OWASP Top-10, Metasploit, memory forensics).",
+    "source_doc": "course_catalog.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "How do you formally prove Armstrong's Transitivity Axiom using reflexivity and augmentation?",
+    "expected_output": "Given X -> Y (1) and Y -> Z (2): By Augmentation on (1) with X, XX -> XY, which gives X -> XY. By Augmentation on (2) with X, XY -> XZ. By Transitivity between X -> XY and XY -> XZ, we get X -> XZ. By Reflexivity, XZ -> Z since Z is a subset of XZ. Finally, by Transitivity from X -> XZ and XZ -> Z, we obtain X -> Z, completing the proof.",
+    "source_doc": "exam_answer_keys_cs301.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "Why is relation R(A, B, C, D, E) with F = {A->BC, CD->E, B->D, E->A} in 3NF but violates BCNF?",
+    "expected_output": "The candidate keys are A, E, BC, and CD, making all attributes {A, B, C, D, E} prime. In BCNF, every determinant must be a superkey. The functional dependency B -> D violates BCNF because B is not a superkey. However, because D is a prime attribute (part of candidate key CD), B -> D satisfies the 3NF condition (where the dependent attribute is prime). Thus, R is in 3NF but not BCNF.",
+    "source_doc": "exam_answer_keys_cs301.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What are the three passes of the ARIES recovery algorithm and what does each accomplish?",
+    "expected_output": "ARIES operates in three passes: (1) Analysis Pass: scans log forward from the last checkpoint to reconstruct the Dirty Page Table (DPT) and Active Transaction Table (ATT), determining RedoLSN; (2) Redo Pass: replays all logged operations forward from RedoLSN to bring the database to the exact state at the time of crash; (3) Undo Pass: rolls back all active/uncommitted transactions in reverse chronological order using Compensation Log Records (CLRs) for idempotent recovery.",
+    "source_doc": "exam_answer_keys_cs301.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "Why are B+ Trees preferred over regular B-Trees for disk-based relational database indexes?",
+    "expected_output": "B+ Trees are preferred because: (1) Internal nodes store only search keys and child pointers without data records, allowing higher fan-out and shallower tree height (fewer disk I/Os); (2) Leaf nodes are linked sequentially in a doubly-linked list, enabling efficient sequential range queries without multi-level tree traversal; (3) All key lookups traverse the exact same root-to-leaf path length, providing predictable uniform search latency; and (4) Leaf nodes store full records or row pointers, supporting clustered index storage.",
+    "source_doc": "exam_answer_keys_cs301.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What are the five dimensions and percentage weights used to grade student programming assignments?",
+    "expected_output": "Programming assignments are evaluated on: Functional Correctness (35% - passing published and hidden edge tests), Algorithmic Complexity & Efficiency (20% - optimal time/space complexity with proof), Software Design & Code Quality (15% - SOLID principles, clean modular code, PEP8/Google style), Documentation & Test Coverage (15% - docstrings, API contract, >=85% branch coverage), and Academic Integrity (15% - MOSS code similarity < 15%).",
+    "source_doc": "grading_rubric_2025.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "How does the Departmental Grade Moderation Committee handle courses with high failure rates or section disparities?",
+    "expected_output": "The Grade Moderation Committee (GMC) convenes within 10 days of end-semester results. It evaluates cross-section mean, median, and standard deviation, checks for statistically significant disparities (p < 0.05 on Mann-Whitney U test), applies linear scaling or uniform constants if necessary, and conducts a mandatory review of any course with a failure rate exceeding 30% to assess exam calibration and instructional quality.",
+    "source_doc": "grading_rubric_2025.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What are the evaluation milestones and percentage weightings for the CS390 Mini-Project in Semester V?",
+    "expected_output": "The CS390 Mini-Project is evaluated over four milestones: Review 1 - Problem Formulation & Feasibility (15%), Review 2 - Architecture & Design (25% - ER schema, API contract, test plan), Review 3 - Working Prototype Demonstration (40% - live demo, CI/CD pipeline, security scan), and Review 4 - Final Report & Presentation (20% - IEEE format report >= 8 pages and defense).",
+    "source_doc": "grading_rubric_2025.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What is the maximum grade a student can achieve when taking a Supplementary Examination to clear a failed course?",
+    "expected_output": "The maximum grade achievable through a Supplementary Examination is 'B+' (7.0 grade points), regardless of the raw score achieved, to preserve grading equity with students who passed during the regular examination cycle.",
+    "source_doc": "grading_rubric_2025.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What specific topics are taught in Lessons 1 through 3 of the CS460 System Design course?",
+    "expected_output": "Lesson 1 covers System Design Fundamentals & Scalability (vertical vs horizontal scaling, latency vs throughput, L4/L7 load balancing, consistent hashing, CAP theorem, PACELC, BASE, high availability). Lesson 2 covers Low-Level Design: SOLID & OOP (encapsulation, abstraction, inheritance pitfalls, polymorphism, SOLID principles with anti-patterns, UML modeling). Lesson 3 covers Design Patterns Practicum (Creational, Structural, and Behavioral GoF patterns) with an end-to-end Enterprise Parking Lot System case study.",
+    "source_doc": "cs_lesson_plan.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "Which distributed system case studies are covered in Lesson 6 of the CS460 System Design syllabus?",
+    "expected_output": "Lesson 6 covers four end-to-end system design case studies: (1) Distributed URL Shortener (TinyURL scale: 100M writes/day, Base62, KGS, Redis caching, Cassandra); (2) Real-Time Push Notification System (1B subscribers, WebSocket servers, FCM/APNS, Redis Bloom Filter deduplication); (3) Distributed Online Examination Proctoring Platform (WebRTC auto-scaling, AI anomaly detection, blockchain audit log); and (4) Social Photo-Sharing Platform (Instagram scale: hybrid push/pull feed generation, CDN WebP storage, Cassandra follow graph).",
+    "source_doc": "cs_lesson_plan.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "What are the main topics covered in Unit III (Deep Neural Networks) of the CS420 Applied Machine Learning course?",
+    "expected_output": "Unit III of CS420 covers: Multilayer Perceptron and Universal Approximation Theorem; activation functions (ReLU, GELU, Swish); backpropagation computational graphs; weight initialization (Xavier, He); batch normalization and dropout; optimizers (SGD momentum, RMSProp, Adam, AdamW); CNN architectures (AlexNet, VGG, ResNet, EfficientNet); sequence models (LSTM, GRU); and Transformer architectures (scaled dot-product attention, multi-head attention, BERT, GPT, LoRA fine-tuning).",
+    "source_doc": "cs_lesson_plan.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "Why was Marcus Whitfield placed on Academic Probation and what specific intervention plan was created for him?",
+    "expected_output": "Marcus Whitfield was placed on Term 2 Academic Probation due to a CGPA decline from 6.82 to 5.42 and active backlogs in CS210 Discrete Math and CS240 Computer Architecture, caused by foundational proof/architecture gaps, overcommitment as IEEE-CS Technical Secretary (18 hrs/week), and part-time employment (10 hrs/week). His intervention plan included: a 12-credit cap for Fall 2025, 4 hours/week at the Academic Support Center, assigned peer tutor TA Vikram Seth, emergency financial aid referral to reduce work hours, mandatory resignation from IEEE leadership, and bi-weekly advisor check-ins.",
+    "source_doc": "student_academic_advising.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What were the findings of Aaliyah Foster's graduation audit and what career advising was provided to her?",
+    "expected_output": "Aaliyah Foster's graduation audit confirmed completion of all 160 required credits (CGPA 8.84) across all CBCS categories with an approved Capstone Phase I defense, cleared library hold, and settled bursar account, leading to full graduation clearance for June 2026. Career advising evaluated her two job offers — TCS Research (Rs. 11.2 LPA) vs Capgemini Engineering (Rs. 9.8 LPA) — discussing long-term technical growth and a 2-year deferred Master's application timeline.",
+    "source_doc": "student_academic_advising.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "Under what three conditions can a student request a prerequisite waiver for an upper-division course?",
+    "expected_output": "A prerequisite waiver can be requested under three justifications: (1) Demonstrated Equivalent Competency via professional internships, accredited external coursework, or relevant research publications; (2) Academic Bank of Credits (ABC) Transfer established through the national NEP 2020 portal; or (3) Special Research Programme Admission where a graduate student's research project directly requires the specific course.",
+    "source_doc": "student_academic_advising.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What are the eligibility requirements and credit limits for undergraduate students participating in study abroad exchange programs?",
+    "expected_output": "Students in Good Standing with a cumulative CGPA of 7.50 or higher may apply for a one-semester exchange during Semesters VI or VII at one of the university's 14 partner institutions (e.g., TU Delft, NUS, University of Toronto). A maximum of 24 transfer credits may be applied toward degree requirements, appearing as 'P' (Pass) grades without affecting the CGPA divisor.",
+    "source_doc": "student_academic_advising.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "How does the DCMP AI early warning system identify at-risk students and what triggers an alert?",
+    "expected_output": "The early warning system integrates 6 data streams (LMS engagement, biometric attendance, submission timestamps, quiz trajectories, library visits, counseling visits) to compute an Academic Risk Score (ARS) on a 0–100 scale. An ARS of 65 or higher in any rolling 3-week window triggers an automatic Level-1 alert to the faculty advisor, while an ARS of 80 or higher triggers a Level-2 alert escalated to the Head of Department, requiring action within 5 working days.",
+    "source_doc": "academic_standing_interventions.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What were the diagnostic findings and committee decision regarding Naomi Chen's probation review?",
+    "expected_output": "Naomi Chen experienced a CGPA drop from 7.44 to 5.44 by Semester V. Medical records certified by the University Chief Medical Officer confirmed a diagnosis of Major Depressive Disorder under active pharmacotherapy. The Academic Standing Committee voted 4–1 to grant one final probationary extension term for Fall 2025, requiring a minimum SGPA of 6.50, bi-weekly psychiatric follow-up, a 16-credit registration cap, and coordinated health-academic advising from Dr. Sarah Jenkins.",
+    "source_doc": "academic_standing_interventions.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What are the legal terms and restrictions included in the mandatory Academic Recovery Contract (ARC) for probation students?",
+    "expected_output": "The Academic Recovery Contract (ARC) mandates: (a) an administrative credit cap (typically 12-14 credits); (b) mandatory weekly attendance at the Academic Support Center with verified logs; (c) bi-weekly advisor conferences; (d) disqualification from student leadership positions and university representation; and (e) explicit agreement that failure to meet the semester SGPA target will automatically trigger academic suspension without further hearing.",
+    "source_doc": "academic_standing_interventions.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "How does the PM-Vidyalaxmi education loan scheme work, and what are the income limits for interest subvention?",
+    "expected_output": "The PM-Vidyalaxmi Scheme (launched November 2024) provides collateral-free, guarantor-free education loans up to Rs. 10 Lakhs for students in Quality Higher Education Institutions (QHEIs). Students from families with an annual income up to Rs. 8 Lakhs receive a 3% interest subvention during the study period, followed by a 12-month moratorium before repayment begins. Applications are submitted via pmvidyalaxmi.co.in.",
+    "source_doc": "financial_aid_and_scholarships.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What are the rules and requirements for lifting a Bursar Registration Hold for students waiting for a bank loan disbursement?",
+    "expected_output": "Under Bursar Policy Clause 5.2, students with unsettled dues past 45 days receive a Registration Hold. However, students awaiting bank loan disbursement (such as PM-Vidyalaxmi or NBCFDC) can obtain an Administrative Hold Waiver for up to 60 days by submitting a formal bank sanction letter, disbursement timeline confirmation, and a signed undertaking to the Bursar's Office, which reviews requests within 3 working days.",
+    "source_doc": "financial_aid_and_scholarships.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What income criteria and fee concessions are provided under the university's Economically Weaker Section (EWS) Freeship scheme?",
+    "expected_output": "The EWS Freeship provides a 100% full tuition fee waiver for students whose gross annual household income is below Rs. 3,00,000, verified via certified revenue income certificates and tax returns. A partial 75% tuition freeship is available for students with household income between Rs. 3,00,001 and Rs. 4,50,000.",
+    "source_doc": "financial_aid_and_scholarships.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What is the Emergency Student Welfare Relief Fund (ESWRF) and what is the maximum grant available?",
+    "expected_output": "The ESWRF provides non-repayable emergency grants of up to Rs. 75,000 for students facing sudden financial crises, such as the death or disability of the primary earner, catastrophic medical emergencies, or natural disasters. Applications are reviewed by the Dean of Student Welfare within 72 hours, and students may apply at most twice during their degree programme.",
+    "source_doc": "financial_aid_and_scholarships.pdf",
+    "tier": "advisor",
+    "required_role": "advisor"
+  },
+  {
+    "question": "What research and teaching achievements led to the unanimous tenure recommendation for Dr. Elena Marsh?",
+    "expected_output": "Dr. Elena Marsh published 12 top-tier database papers (IEEE TKDE, ACM SIGMOD, VLDB, ICDE, PODS) with 1,247 citations and an h-index of 15; secured a Rs. 45 Lakh DST-SERB grant and co-PI on a Rs. 1.2 Crore MeitY grant; filed two patents; earned a 4.63/5.0 student teaching rating; developed the widely adopted 'Northgate QueryBench' tool; and received unanimous 5/5 external referee ratings (CMU, Google DeepMind), leading to a 6-0 unanimous P&TC tenure vote.",
+    "source_doc": "faculty_tenure_review.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What are the minimum Annual API point requirements across Categories I, II, and III for promotion under the UGC CAS system?",
+    "expected_output": "Under the UGC CAS system (UO-2023-ACAD-11), faculty must achieve: Category I (Teaching, Learning & Evaluation) minimum 80 API points/year; Category II (Co-curricular & Professional Development) minimum 15 API points/year; Category III (Research, Publications & Grants) minimum 25 API points/year for Associate Professor and 40 API points/year for Professor. The overall average must be at least 120 API points/year.",
+    "source_doc": "faculty_tenure_review.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What were the findings and recommendation in the 3rd-year pre-tenure review for Dr. Julian Vance?",
+    "expected_output": "Dr. Julian Vance (ECE) published 4 IEEE journal papers and 6 conference papers, and holds a Rs. 25 Lakh DST Early Career Research Award. The committee recommended reappointment for a second 3-year term, with specific directives to accelerate grant applications to the DST-DRDO Aeronautics Program and ISRO RESPOND, and to increase doctoral student supervision from 2 to 4 scholars prior to the 6th-year tenure review.",
+    "source_doc": "faculty_tenure_review.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What are the computing specifications and project phases for the new AI Supercomputing Center Project Swarnim?",
+    "expected_output": "Project Swarnim (budget Rs. 14.2 Crores, co-funded by DST-FIST and university capex) consists of: Phase 1 (Q1 2026) - 8 NVIDIA H100 SXM5 GPU compute nodes (80GB HBM3 each) delivering 32+ petaflops of FP8 tensor compute over a 400 Gbps InfiniBand NDR fabric; Phase 2 (Q3 2026) - a 4 PB all-flash NVMe Dell PowerScale storage cluster; and Phase 3 (Q1 2027) - an AI Model Repository shared across 6 partner universities under the National Supercomputing Mission.",
+    "source_doc": "department_strategic_plan.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What are the strategic initiatives planned by the School of Computing to reach the NIRF Top-50 engineering ranking by 2027?",
+    "expected_output": "The School is targeting Teaching, Learning & Resources (TLR - 30% NIRF weight) and Research & Professional Practice (RP - 30% weight) which comprise 60% of the score. Key actions include hiring 18 tenure-track PhD faculty and 4 Endowed Chairs, establishing 3 Centers of Excellence (CTAAE, CCDZT, CSCES), launching Project Swarnim GPU cluster, establishing an Industry Consortium (IATC) with 10 founding corporate partners, and setting up a dedicated NIRF Data Management Cell.",
+    "source_doc": "department_strategic_plan.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What are the three Centers of Excellence (CoEs) established under the School's 5-year strategic plan and who directs them?",
+    "expected_output": "The three CoEs are: (1) Center for Trustworthy AI & Algorithmic Ethics (CTAAE), directed by Dr. Ananya Krishnan (partnered with Persistent and Wipro); (2) Center for Cyber Defense & Zero-Trust Architecture (CCDZT), directed by Dr. Julian Vance (partnered with CERT-In and DRDO); and (3) Center for Sustainable Cloud & Edge Systems (CSCES), directed by Dr. Ravi Subramaniam (partnered with AWS and Microsoft Azure).",
+    "source_doc": "department_strategic_plan.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What cybersecurity attack did Liam O'Connor execute in hearing DH-2025-035 and what sanctions were imposed on him?",
+    "expected_output": "Liam O'Connor executed an unauthorized attack on the Faculty Grading Server involving a 4,096-port Nmap scan, 8 SQL injection payloads on the login form, and directory traversal attempts, traced to his laptop IP via RADIUS logs. Sanctions imposed (unanimous 5-0 vote): one-semester academic suspension for Spring 2026, permanent revocation of all campus computing and Wi-Fi access, mandatory parent counseling, referral to Cyber Crime Cell under IT Act Sections 43/66, and a disciplinary transcript notation.",
+    "source_doc": "disciplinary_hearings.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What was Devon Ramirez charged with in disciplinary hearing DH-2025-014 and what was the panel's ruling?",
+    "expected_output": "Devon Ramirez was charged with Level 2 Academic Dishonesty for submitting a CS301 SQL lab assignment with 92% structural similarity to a public GitHub repository and distributing the solution file to 3 peers on WhatsApp. The panel voted 4–1 to award zero credit (0/50) on Assignment 3, reduce his final course grade by one letter, mandate attendance at a 4-week Academic Ethics Workshop, and enter a formal conduct warning in his record.",
+    "source_doc": "disciplinary_hearings.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What were the findings and sanctions against Tyler Scott in hearing DH-2025-042 regarding examination papers?",
+    "expected_output": "Tyler Scott was found guilty of Level 3 misconduct for illicitly printing and procuring draft CAT-2 examination question papers for three courses from a research lab printer using his LDAP credentials, with physical copies recovered from his hostel room. Sanctions: an 'F' grade in all three registered courses for Fall 2025 and a one-year academic suspension starting January 2026.",
+    "source_doc": "disciplinary_hearings.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "Can a general public user or student see confidential faculty tenure review ratings or salary details?",
+    "expected_output": "Under university RBAC and data governance policies, faculty tenure review records, external referee evaluations, and salary details are classified as confidential Dean-tier records. General public and student roles do not have access to these documents.",
+    "source_doc": "faculty_tenure_review.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "Can a student access official CS301 final examination answer keys and master marking rubrics?",
+    "expected_output": "Final examination solution keys and grading compendiums for CS301 are restricted to Faculty, Advisor, and Dean tiers. They are confidential instructional records not accessible under public or student access roles.",
+    "source_doc": "exam_answer_keys_cs301.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "Can faculty members view sealed disciplinary committee findings and legal referral files?",
+    "expected_output": "Sealed disciplinary committee hearing records, forensic cyber logs, and legal referral documents are restricted exclusively to Dean and administrative legal roles. Faculty-level access does not include confidential Disciplinary Committee hearing dossiers.",
+    "source_doc": "disciplinary_hearings.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  },
+  {
+    "question": "What are the hostel quiet hours and gate closure timings for students living on campus?",
+    "expected_output": "Mandatory biometric in-time is 09:30 PM on weekdays and 10:30 PM on weekends and holidays. Quiet hours are strictly enforced between 11:00 PM and 06:00 AM across all residential hostels.",
+    "source_doc": "campus_policies_2025.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What is the structure of the M.Tech Computer Science programme and what GATE score is needed for admission?",
+    "expected_output": "The M.Tech CSE is a 2-year, 4-semester programme requiring 72 credits (32 core, 16 electives, 20 research thesis, 4 seminar) across AI/ML, Software Systems, and Cloud Data Engineering specializations, requiring a minimum GATE percentile of 85.",
+    "source_doc": "course_catalog.pdf",
+    "tier": "public",
+    "required_role": "public"
+  },
+  {
+    "question": "What are the core differences between Mesa and Hoare monitor semantics in OS synchronization as taught in CS340?",
+    "expected_output": "In Hoare monitor semantics, signaling immediately transfers CPU control to the waiting thread with the lock. In Mesa semantics (used in POSIX and Java), signaling moves the waiting thread to the ready queue and the signaling thread retains the lock, requiring condition checks in a while loop rather than an if statement.",
+    "source_doc": "cs_lesson_plan.pdf",
+    "tier": "faculty",
+    "required_role": "faculty"
+  },
+  {
+    "question": "How does the School distribute indirect cost overheads from external sponsored research grants?",
+    "expected_output": "Under the University Research Finance Policy, indirect cost overheads (IDC) are distributed as: 50% to the Central University Research Facilitation Fund (CURFF), 30% to the host department for equipment and lab stipends, and 20% to the PI's Professional Development Account.",
+    "source_doc": "department_strategic_plan.pdf",
+    "tier": "dean",
+    "required_role": "dean"
+  }
+]
+
