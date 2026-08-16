@@ -128,24 +128,22 @@ RAG/
 │   └── dean/                         # Strategic plans, tenure & disciplinary (PDF)
 ├── src/
 │   ├── config.py                     # Environment, model & database config
-│   ├── observability.py              # Arize Phoenix OpenTelemetry tracing setup
+│   ├── observability.py              # Native LangSmith tracing configuration
 │   ├── db.py                         # SQLite database initializer & role scoping
 │   ├── graph_router.py               # LangGraph hybrid router + Text-to-SQL engine
 │   ├── ingester.py                   # Recursive PDF loader with tier metadata
 │   ├── retriever.py                  # Role-filtered Qdrant hybrid vector store
 │   ├── rag_engine.py                 # RAG pipeline: Decompose -> Retrieve -> Jina Rerank
-│   ├── cache.py                      # In-memory semantic cache (BGE + Qdrant)
-│   └── main.py                       # FastAPI REST API endpoints
+│   └── cache.py                      # In-memory semantic cache (BGE + Qdrant)
 ├── test/
-│   └── QA.json                       # 50 ground-truth evaluation test cases
+│   ├── QA.json                       # 50 ground-truth evaluation test cases
+│   ├── cache.py                      # Semantic cache latency & hit rate benchmark
+│   ├── router.py                     # Router accuracy & SQL RBAC benchmark
+│   └── eval.py                       # DeepEval 50 Q&A benchmark & RBAC leak checker
 ├── scripts/
 │   ├── gen_students_csv.py           # Synthetic Indian student records generator
-│   ├── gen_data.py                   # Multi-page ReportLab PDF data generator
-│   ├── test_groq.py                  # Groq API sanity check
-│   └── test_query.py                 # Retriever & RAG diagnostic tool
-├── benchmark_router.py               # Router accuracy & SQL RBAC benchmark
-├── benchmark_cache.py                # Semantic cache latency & hit rate benchmark
-├── benchmark.py                      # DeepEval 50 Q&A benchmark & RBAC leak checker
+│   └── gen_data.py                   # Multi-page ReportLab PDF data generator
+├── app.py                            # Streamlit Multi-Tenant RBAC Chat UI
 └── README.md                         # Project documentation & metrics
 ```
 
@@ -186,57 +184,16 @@ uv run python -m src.ingester
 ### 4. Run Benchmarks
 ```powershell
 # Benchmark 1: LangGraph Router & SQL RBAC (100% Accuracy):
-uv run python benchmark_router.py
+uv run python test/router.py
 
 # Benchmark 2: In-Memory Semantic Cache (629x Speedup):
-uv run python benchmark_cache.py
+uv run python test/cache.py
 
 # Benchmark 3: Full DeepEval RAG Accuracy (88% SOTA):
-uv run python benchmark.py
+uv run python test/eval.py
 ```
 
 ### 5. Launch Interactive Streamlit UI (RBAC Portal)
 ```powershell
 uv run streamlit run app.py
-```
-
-### 6. Launch FastAPI Server
-```powershell
-uv run uvicorn src.main:app --reload
-```
-
----
-
-## 🔌 API Usage
-
-### Hybrid Query Endpoint (`POST /query`)
-
-#### 1. Structured SQL Analytics (e.g. Faculty Placement Query)
-```bash
-curl -X POST http://127.0.0.1:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "What is the highest placement package achieved and which student received it?",
-    "role": "faculty"
-  }'
-```
-
-#### 2. Unstructured Policy Query (e.g. Public Student Query)
-```bash
-curl -X POST http://127.0.0.1:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "What are the hostel quiet hours and gate closure timings?",
-    "role": "public"
-  }'
-```
-
-#### 3. Sensitive Governance Query (e.g. Dean Disciplinary Query)
-```bash
-curl -X POST http://127.0.0.1:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "List all students with active disciplinary flags.",
-    "role": "dean"
-  }'
 ```

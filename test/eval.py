@@ -62,7 +62,7 @@ class GroqEvalLLM(DeepEvalBaseLLM):
 
 
 def load_qa_dataset() -> list[dict]:
-    qa_path = Path(__file__).resolve().parent / "test" / "QA.json"
+    qa_path = Path(__file__).resolve().parent / "QA.json"
     if qa_path.exists():
         with open(qa_path, "r", encoding="utf-8") as f:
             return json.load(f)
