@@ -9,6 +9,7 @@ from langchain_groq import ChatGroq
 
 from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K, JINA_API_KEY, JINA_RERANK_MODEL
 from src.retriever import get_retriever
+from src.cache import semantic_cache
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -93,6 +94,17 @@ def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):
 
 
 def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> Dict[str, Any]:
+    # Cache check — skip entire pipeline if a semantically identical question was already answered
+    cached_answer = semantic_cache.get(question, role)
+    if cached_answer is not None:
+        return {
+            "question":  question,
+            "role":      role,
+            "answer":    cached_answer,
+            "docs":      [],
+            "cache_hit": True,
+        }
+
     # Stage 1: Query Decomposition — break complex/multi-hop questions into sub-queries
     sub_queries = decompose_query(question)
 
@@ -107,7 +119,7 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
                 seen_ids.add(doc_id)
                 all_docs.append(doc)
 
-    # Stage 3: Cross-encoder reranking on merged pool — keep top RERANK_TOP_N
+    # Stage 3: Jina Reranker v3.5 — score merged pool, keep top RERANK_TOP_N
     reranked_docs = rerank_docs(question, all_docs, top_n=RERANK_TOP_N)
 
     # Stage 4: CoT Answer generation with reranked context
@@ -115,9 +127,13 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
 
+    # Store result in cache for future similar queries
+    semantic_cache.set(question, role, answer)
+
     return {
-        "question": question,
-        "role": role,
-        "answer": answer,
-        "docs": reranked_docs,
+        "question":  question,
+        "role":      role,
+        "answer":    answer,
+        "docs":      reranked_docs,
+        "cache_hit": False,
     }

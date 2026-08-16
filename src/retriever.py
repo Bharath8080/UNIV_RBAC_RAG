@@ -10,6 +10,17 @@ from src.config import QDRANT_PATH, COLLECTION_NAME, EMBED_MODEL, SPARSE_EMBED_M
 dense_embeddings  = FastEmbedEmbeddings(model_name=EMBED_MODEL)
 sparse_embeddings = FastEmbedSparse(model_name=SPARSE_EMBED_MODEL)
 
+# Singleton — one shared QdrantClient for the entire process lifetime.
+_qdrant_client: QdrantClient | None = None
+
+
+def get_qdrant_client() -> QdrantClient:
+    global _qdrant_client
+    if _qdrant_client is None:
+        _qdrant_client = QdrantClient(path=QDRANT_PATH)
+    return _qdrant_client
+
+
 # Hierarchical RBAC role mappings
 ROLE_TIER_MAPPING: dict[str, list[str]] = {
     "public":  ["public"],
@@ -17,10 +28,6 @@ ROLE_TIER_MAPPING: dict[str, list[str]] = {
     "advisor": ["public", "faculty", "advisor"],
     "dean":    ["public", "faculty", "advisor", "dean"],
 }
-
-
-def get_qdrant_client() -> QdrantClient:
-    return QdrantClient(path=QDRANT_PATH)
 
 
 def get_vector_store() -> QdrantVectorStore:
@@ -43,7 +50,6 @@ def get_vector_store() -> QdrantVectorStore:
     )
 
 
-
 def get_role_filter(role: str = "public") -> models.Filter:
     """Constructs a Qdrant metadata payload filter isolating search to allowed tiers for the role."""
     allowed_tiers: List[str] = ROLE_TIER_MAPPING.get(role.lower(), ["public"])
@@ -58,7 +64,7 @@ def get_role_filter(role: str = "public") -> models.Filter:
 
 
 def get_retriever(role: str = "public", k: int = 4):
-    """Returns a role-isolated hybrid retriever combining BGE dense + SPLADE sparse vectors."""
+    """Returns a role-isolated hybrid retriever combining dense + SPLADE sparse vectors."""
     role_filter = get_role_filter(role)
     return get_vector_store().as_retriever(
         search_kwargs={
@@ -66,6 +72,3 @@ def get_retriever(role: str = "public", k: int = 4):
             "filter": role_filter,
         }
     )
-
-
-

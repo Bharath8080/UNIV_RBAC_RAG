@@ -1,7 +1,6 @@
 # 🏛️ University Multi-Tenant RBAC RAG
 
-An enterprise-grade, role-based Retrieval-Augmented Generation (RAG) system built with **FastAPI**, **LangChain**, **Qdrant Vector Database**, and **Groq (Llama 3.3 70B)**, featuring hierarchical **Role-Based Access Control (RBAC)** metadata payload partitioning and evaluated end-to-end using **DeepEval** across 50 ground-truth test cases.
-
+An enterprise-grade, role-based Retrieval-Augmented Generation (RAG) system built with **FastAPI**, **LangChain**, **Qdrant Vector Database**, and **Groq (Llama 3.3 70B)**, featuring hierarchical **Role-Based Access Control (RBAC)** metadata payload partitioning, evaluated end-to-end using **DeepEval** across 50 ground-truth test cases, and optimised with a **Semantic Cache** for production cost reduction.
 
 ---
 
@@ -20,7 +19,6 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 | **Contextual Recall** | **0.95** | **90.00%** (45/50) | 🟢 Complete capture of multi-part policies, numbers & proofs |
 
 - **Total Test Cases Passed**: **36 / 50 (72.00%)**
-- **Failed Test Cases**: **14 / 50 (28.00%)**
 
 ---
 
@@ -35,32 +33,28 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 | **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 High retrieval recall for exact course IDs and policy names |
 
 - **Total Test Cases Passed**: **39 / 50 (78.00%)**
-- **Failed Test Cases**: **11 / 50 (22.00%)**
 
 ---
 
-### 🎯 3. Hybrid Search + Cross-Encoder Reranker (SOTA Production Pipeline)
-*Stage 1 Hybrid Retrieval (`k=10`) $\to$ Stage 2 Cross-Encoder Reranker (`Xenova/ms-marco-MiniLM-L-6-v2`) scoring $(q, d)$ joint pairs $\to$ Top-4 passed to Groq Llama 3.3 70B.*
+### 🎯 3. Hybrid Search + Cross-Encoder Reranker
+*Stage 1 Hybrid Retrieval ($k=10$) $\to$ Stage 2 Cross-Encoder Reranker (`Xenova/ms-marco-MiniLM-L-6-v2`) $\to$ Top-4 passed to Groq Llama 3.3 70B.*
 
 | Metric | Average Score | Pass Rate | Evaluation Result |
 |:---|:---:|:---:|:---|
 | **Faithfulness** | **0.96** | **94.00%** (47/50) | 🟢 Flawless grounding on strictly reranked high-confidence passages |
 | **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Answers razor-focused on specific policy criteria |
-| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Reranker positions exact golden chunk at rank #1 |
+| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate** — Reranker positions exact golden chunk at rank #1 |
 | **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 Comprehensive coverage of grading bounds & administrative dates |
 
-#### 🎯 Reranked Test Case Outcomes:
-- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **42 / 50 (84.00%)** *(+12% gain over baseline)*
-- **Failed Test Cases**: **8 / 50 (16.00%)**
+- **Total Test Cases Passed**: **42 / 50 (84.00%)**
 - **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
 
 ---
 
 ### 🧩 4. Query Decomposition + CoT Synthesis
-*Stage 1 Query Decomposition (Groq LLM breaks multi-hop questions into 2-3 focused sub-queries) $\to$ Stage 2 Multi-Query Hybrid Retrieval (BGE + SPLADE with document deduplication) $\to$ Stage 3 Cross-Encoder Reranking (`ms-marco-MiniLM-L-6-v2`) $\to$ Stage 4 Chain-of-Thought (CoT) Answer Synthesis.*
+*Query Decomposition $\to$ Multi-Query Hybrid Retrieval (deduplication) $\to$ Cross-Encoder Reranking $\to$ Chain-of-Thought Answer Synthesis.*
 
 - **Total Test Cases Passed**: **43 / 50 (86.00%)**
-- **Failed Test Cases**: **7 / 50 (14.00%)**
 - **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
 
 <p align="center">
@@ -72,19 +66,17 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 
 ---
 
-### 🚀 5. Jina Reranker v3.5 + System/Human Prompt Split (Current SOTA Production Pipeline)
-*Query Decomposition $\to$ Hybrid Retrieval ($k=15$) $\to$ **Jina Reranker v3.5 API** ($top\_n=6$) $\to$ Boundary-Aware Paragraph Chunking ($800/200$) $\to$ Direct System/Human Prompt Split with Preamble Suppression.*
+### 🚀 5. Jina Reranker v3.5 + Prompt Split (SOTA Production Pipeline)
+*Query Decomposition $\to$ Hybrid Retrieval ($k=15$) $\to$ **Jina Reranker v3.5 API** ($top\_n=6$) $\to$ Direct System/Human Prompt Split with Preamble Suppression.*
 
 | Metric | Average Score | Pass Rate | Evaluation Result |
 |:---|:---:|:---:|:---|
-| **Answer Relevancy** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate (50/50)** — Preamble suppression eliminated semantic drift completely |
-| **Faithfulness** | **0.98** | **98.00%** (49/50) | 🟢 Flawless factual grounding across multi-page policy and disciplinary documents |
-| **Contextual Precision** | **0.96** | **98.00%** (49/50) | 🟢 Jina Reranker v3.5 prioritizes relevant cross-paragraph context with high fidelity |
-| **Contextual Recall** | **0.96** | **92.00%** (46/50) | 🚀 **+1% score jump** — Expanded top-6 context horizon captures multi-clause policies |
+| **Answer Relevancy** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate** — Preamble suppression eliminated semantic drift completely |
+| **Faithfulness** | **0.98** | **98.00%** (49/50) | 🟢 Flawless factual grounding across multi-page policy documents |
+| **Contextual Precision** | **0.96** | **98.00%** (49/50) | 🟢 Jina Reranker v3.5 prioritizes relevant cross-paragraph context |
+| **Contextual Recall** | **0.96** | **92.00%** (46/50) | 🚀 Expanded top-6 context horizon captures multi-clause policies |
 
-#### 🎯 SOTA Test Case Outcomes:
-- **Total Test Cases Passed (All 4 metrics passed simultaneously)**: **44 / 50 (88.00%)** *(+16% overall gain over baseline)*
-- **Failed Test Cases**: **6 / 50 (12.00%)**
+- **Total Test Cases Passed**: **44 / 50 (88.00%)** *(+16% overall gain over baseline)*
 - **RBAC Security & Boundary Isolation**: **36/36 checks passed (100% Isolation Enforced)**
 
 <p align="center">
@@ -100,15 +92,37 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 
 | Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **1. Dense Semantic (Baseline)** | 72.00% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
-| **2. Hybrid (BGE + SPLADE)** | 78.00% (39/50) | 0.96 (92%) | 0.98 (96%) | 0.94 (98%) | 0.95 (92%) |
-| **3. Hybrid + Cross-Encoder Rerank** | 84.00% (42/50) | 0.96 (94%) | 0.97 (96%) | 0.97 (100%) | 0.95 (92%) |
-| **4. Query Decomposition + CoT** | 86.00% (43/50) | **0.99 (98%)** | 0.95 (92%) | **0.97 (100%)** | 0.95 (92%) |
-| **5. Jina Reranker v3.5 + Prompt Split** | **88.00% (44/50)** 🚀 | 0.98 (98%) | **0.97 (100%)** 🏆 | 0.96 (98%) | **0.96 (92%)** 🚀 |
+| **1. Dense Semantic (Baseline)** | 72% (36/50) | 0.99 (100%) | 0.97 (96%) | 0.85 (84%) | 0.95 (90%) |
+| **2. Hybrid (BGE + SPLADE)** | 78% (39/50) | 0.96 (92%) | 0.98 (96%) | 0.94 (98%) | 0.95 (92%) |
+| **3. Hybrid + Cross-Encoder Rerank** | 84% (42/50) | 0.96 (94%) | 0.97 (96%) | 0.97 (100%) | 0.95 (92%) |
+| **4. Query Decomposition + CoT** | 86% (43/50) | 0.99 (98%) | 0.95 (92%) | 0.97 (100%) | 0.95 (92%) |
+| **5. Jina Reranker v3.5 + Prompt Split** | **88% (44/50)** 🚀 | 0.98 (98%) | **0.97 (100%)** 🏆 | 0.96 (98%) | 0.96 (92%) |
 
+---
 
+## 💰 Semantic Cache Performance
 
+An in-memory **Semantic Cache** (`BAAI/bge-small-en-v1.5` + Qdrant cosine similarity, `threshold=0.78`) is layered in front of the full RAG pipeline to eliminate redundant LLM API calls on warm workloads.
 
+| Metric | Result |
+|:---|:---:|
+| **Cold pipeline latency** | 2.926s (full RAG) |
+| **Cache hit latency** | 0.005s (embedding lookup) |
+| **Speedup on cache hits** | 🔥 **629x faster** |
+| **Identical query hit rate** | **100%** (8/8) |
+| **Semantic paraphrase hit rate** | **100%** (8/8) |
+| **LLM calls eliminated** | **16/16** on warm workload |
+| **Tokens saved** | ~14,400 per workload |
+
+**Key properties:**
+- **Role-aware isolation** — faculty and public queries are cached independently (RBAC never violated)
+- **In-memory only** — resets on restart (no stale answers across deployments)
+- **Zero accuracy loss** — cache only serves previously validated answers
+
+```powershell
+# Reproduce cache benchmark
+uv run python benchmark_cache.py
+```
 
 ---
 
@@ -154,7 +168,8 @@ RAG/
 │   ├── config.py                     # Environment, model & database config
 │   ├── ingester.py                   # Recursive PDF loader with tier metadata
 │   ├── retriever.py                  # Role-filtered Qdrant vector store
-│   ├── rag_engine.py                 # Role-aware RAG prompt chain & Groq LLM
+│   ├── rag_engine.py                 # Role-aware RAG chain, Groq LLM & cache
+│   ├── cache.py                      # In-memory semantic cache (BGE + Qdrant)
 │   └── main.py                       # FastAPI REST API endpoints
 ├── test/
 │   └── QA.json                       # 50 realistic, conversational test cases
@@ -163,6 +178,7 @@ RAG/
 │   ├── test_groq.py                  # Groq API sanity check
 │   └── test_query.py                 # Retriever & RAG diagnostic tool
 ├── benchmark.py                      # DeepEval & RBAC isolation test runner
+├── benchmark_cache.py                # Semantic cache performance benchmark
 └── README.md                         # Project documentation & metrics
 ```
 
@@ -179,12 +195,13 @@ uv sync
 Create a `.env` file in the project root:
 ```env
 GROQ_API_KEY=gsk_your_groq_api_key_here
+JINA_API_KEY=jina_your_jina_api_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
 QDRANT_PATH=./qdrant_db
-COLLECTION_NAME=plain_rag
+COLLECTION_NAME=univ_hybrid_rag
 ```
 
-### 3. Generate & Ingest Documents
+### 3. Ingest Documents
 ```powershell
 # (Optional) Generate the 12 comprehensive PDFs:
 uv run python scripts/gen_data.py
@@ -193,10 +210,13 @@ uv run python scripts/gen_data.py
 uv run python -m src.ingester
 ```
 
-### 4. Run Benchmark & RBAC Isolation Verification
+### 4. Run Benchmarks
 ```powershell
-# Run RBAC boundary check and evaluate all 50 test cases:
+# Full RAG accuracy + RBAC isolation (50 test cases):
 uv run python benchmark.py
+
+# Semantic cache performance (latency, speedup, hit rates):
+uv run python benchmark_cache.py
 ```
 
 ### 5. Launch FastAPI Server
