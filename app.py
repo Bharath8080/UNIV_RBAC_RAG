@@ -1,7 +1,11 @@
+import os
 import streamlit as st
+from dotenv import load_dotenv
+
 from src.db import init_db
 from src.graph_router import orchestrator
 
+load_dotenv()
 
 # Initialize SQLite database & RBAC tables on startup
 init_db()
@@ -16,7 +20,7 @@ st.set_page_config(
 # ── User Accounts & Role Mapping ─────────────────────────────────────────────
 USERS = {
     "student": {
-        "password": "student123",
+        "password": os.getenv("STUDENT_PASSWORD", "student123"),
         "role": "public",
         "name": "Alex Kumar (Student)",
         "icon": "🎓",
@@ -30,7 +34,7 @@ USERS = {
         ],
     },
     "faculty": {
-        "password": "faculty123",
+        "password": os.getenv("FACULTY_PASSWORD", "faculty123"),
         "role": "faculty",
         "name": "Prof. S. Sharma",
         "icon": "👨‍🏫",
@@ -44,7 +48,7 @@ USERS = {
         ],
     },
     "advisor": {
-        "password": "advisor123",
+        "password": os.getenv("ADVISOR_PASSWORD", "advisor123"),
         "role": "advisor",
         "name": "Dr. K. Rao (Advisor)",
         "icon": "🧭",
@@ -58,7 +62,7 @@ USERS = {
         ],
     },
     "dean": {
-        "password": "dean123",
+        "password": os.getenv("DEAN_PASSWORD", "dean123"),
         "role": "dean",
         "name": "Dean M. Murthy",
         "icon": "🏛️",
