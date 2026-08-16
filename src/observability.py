@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY", "")
-LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT", "univ-rbac-rag")
-LANGSMITH_ENDPOINT = os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
+LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
+LANGSMITH_ENDPOINT = os.getenv("LANGSMITH_ENDPOINT")
 
 
 def setup_langsmith() -> None:

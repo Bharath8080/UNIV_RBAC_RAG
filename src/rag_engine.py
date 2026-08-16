@@ -15,6 +15,7 @@ llm = ChatGroq(
     model=GROQ_MODEL,
     groq_api_key=GROQ_API_KEY,
     temperature=0,
+    streaming=True,
 )
 
 # Query Decomposition prompt — breaks complex questions into focused sub-queries

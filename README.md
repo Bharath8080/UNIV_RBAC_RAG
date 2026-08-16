@@ -1,94 +1,78 @@
-# 🏛️ University Multi-Tenant RBAC RAG
+# 🏛️ University Multi-Tenant Hybrid Intelligence (Text-to-SQL + Agentic RAG)
 
-An enterprise-grade, role-based Retrieval-Augmented Generation (RAG) system built with **FastAPI**, **LangChain**, **Qdrant Vector Database**, and **Groq (Llama 3.3 70B)**, featuring hierarchical **Role-Based Access Control (RBAC)** metadata payload partitioning, evaluated end-to-end using **DeepEval** across 50 ground-truth test cases, and optimised with a **Semantic Cache** for production cost reduction.
+An enterprise-grade, multi-tenant intelligence platform combining **Text-to-SQL Agents**, **Hybrid RAG (Dense + SPLADE + Jina Reranker v3.5)**, **LangGraph Query Routing**, and **In-Memory Semantic Caching** under unified **Role-Based Access Control (RBAC)** across structured student databases and unstructured academic policies.
 
 ---
 
-## 📊 Evaluation Benchmarks (50 Q&A Test Cases)
+## 🌟 System Architecture Overview
 
-Evaluations were executed using **DeepEval** with industry production threshold `threshold = 0.70`, judged by Groq LLM (`openai/gpt-oss-120b`).
+```
+                                User Query + Role
+                                       │
+                                       ▼
+                           ┌───────────────────────┐
+                           │ Semantic Cache Check  │ ──(HIT)──► Return <5ms
+                           └───────────┬───────────┘
+                                       │ (MISS)
+                                       ▼
+                           ┌───────────────────────┐
+                           │   LangGraph Router    │
+                           └───────────┬───────────┘
+                                       │
+                       ┌───────────────┴───────────────┐
+                       ▼                               ▼
+             ┌───────────────────┐           ┌───────────────────┐
+             │     SQL Agent     │           │    RAG Engine     │
+             │ (Role-Based View) │           │  (Qdrant + Jina)  │
+             └─────────┬─────────┘           └─────────┬─────────┘
+                       │                               │
+                       └───────────────┬───────────────┘
+                                       ▼
+                          Synthesize & Cache Store
+```
 
-### 📈 1. Dense Semantic Search (Baseline)
-*Dense vector embeddings (`sentence-transformers/all-MiniLM-L6-v2`) with cosine similarity, Qdrant payload filtering, and Top-K retrieval ($k=4$).*
+---
 
-| Metric | Average Score | Pass Rate | Evaluation Result |
+## 📊 Evaluation Benchmarks
+
+### 🎯 1. LangGraph Router & Text-to-SQL Evaluation
+Evaluated across diverse analytical SQL queries and unstructured policy questions with deterministic role isolation:
+
+| Evaluation Component | Metrics / Tests | Pass Rate | Result |
 |:---|:---:|:---:|:---|
-| **Faithfulness** | **0.99** | **100.00%** (50/50) | 🟢 Flawless factual grounding with zero hallucinations |
-| **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Highly pertinent, direct answers aligned with user intent |
-| **Contextual Precision** | **0.85** | **84.00%** (42/50) | 🟢 Strong signal-to-noise ratio in top-ranked document chunks |
-| **Contextual Recall** | **0.95** | **90.00%** (45/50) | 🟢 Complete capture of multi-part policies, numbers & proofs |
+| **Router Classification** | SQL vs RAG Intent Routing | **100.00%** (16/16) | 🏆 Flawless Pydantic structured output classification |
+| **SQL RBAC Isolation** | Column & Table Partitioning | **100.00%** (4/4 Tiers) | 🔒 Zero data leakage across Public, Faculty, Advisor & Dean |
+| **SQL Query Accuracy** | Analytical Aggregates & Filters | **100.00%** | 🟢 Optimal SQLite execution with accurate LLM synthesis |
 
-- **Total Test Cases Passed**: **36 / 50 (72.00%)**
-
----
-
-### ⚡ 2. Hybrid Search (Dense BGE + Sparse SPLADE)
-*Dense vector embeddings (`BAAI/bge-small-en-v1.5`) + Sparse lexical embeddings (`prithivida/Splade_PP_en_v1`) with Reciprocal Rank Fusion (RRF) and Qdrant RBAC payload filtering ($k=4$).*
-
-| Metric | Average Score | Pass Rate | Evaluation Result |
-|:---|:---:|:---:|:---|
-| **Faithfulness** | **0.96** | **92.00%** (46/50) | 🟢 Strong factual grounding across complex policy queries |
-| **Answer Relevancy** | **0.98** | **96.00%** (48/50) | 🟢 Exceptionally high query intent alignment |
-| **Contextual Precision** | **0.94** | **98.00%** (49/50) | 🚀 **+9% jump** — SPLADE keyword expansion eliminates irrelevant chunks |
-| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 High retrieval recall for exact course IDs and policy names |
-
-- **Total Test Cases Passed**: **39 / 50 (78.00%)**
+```powershell
+# Run Router & SQL Agent Benchmark
+uv run python benchmark_router.py
+```
 
 ---
 
-### 🎯 3. Hybrid Search + Cross-Encoder Reranker
-*Stage 1 Hybrid Retrieval ($k=10$) $\to$ Stage 2 Cross-Encoder Reranker (`Xenova/ms-marco-MiniLM-L-6-v2`) $\to$ Top-4 passed to Groq Llama 3.3 70B.*
+### 💰 2. In-Memory Semantic Cache Performance
+Layered at graph entry (`BAAI/bge-small-en-v1.5` + Qdrant cosine similarity, `threshold=0.78`) to eliminate redundant LLM execution on warm workloads:
 
-| Metric | Average Score | Pass Rate | Evaluation Result |
-|:---|:---:|:---:|:---|
-| **Faithfulness** | **0.96** | **94.00%** (47/50) | 🟢 Flawless grounding on strictly reranked high-confidence passages |
-| **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Answers razor-focused on specific policy criteria |
-| **Contextual Precision** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate** — Reranker positions exact golden chunk at rank #1 |
-| **Contextual Recall** | **0.95** | **92.00%** (46/50) | 🟢 Comprehensive coverage of grading bounds & administrative dates |
+| Metric | Result |
+|:---|:---:|
+| **Cold pipeline latency** | 2.926s (full pipeline) |
+| **Cache hit latency** | 0.005s (embedding lookup) |
+| **Speedup on cache hits** | 🔥 **629x faster** |
+| **Identical query hit rate** | **100%** (8/8) |
+| **Semantic paraphrase hit rate** | **100%** (8/8) |
+| **LLM calls eliminated** | **16/16** on warm workload |
+| **Tokens saved** | ~14,400 per workload |
 
-- **Total Test Cases Passed**: **42 / 50 (84.00%)**
-- **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
-
----
-
-### 🧩 4. Query Decomposition + CoT Synthesis
-*Query Decomposition $\to$ Multi-Query Hybrid Retrieval (deduplication) $\to$ Cross-Encoder Reranking $\to$ Chain-of-Thought Answer Synthesis.*
-
-- **Total Test Cases Passed**: **43 / 50 (86.00%)**
-- **RBAC Security & Boundary Isolation**: **100% Enforced (0 Document Leaks)**
-
-<p align="center">
-  <img src="screenshots/decomp_cli.png" alt="Query Decomposition Benchmark CLI" width="90%" />
-</p>
-<p align="center">
-  <img src="screenshots/decomp_dash.png" alt="Query Decomposition Confident Dashboard" width="90%" />
-</p>
+```powershell
+# Run Semantic Cache Benchmark
+uv run python benchmark_cache.py
+```
 
 ---
 
-### 🚀 5. Jina Reranker v3.5 + Prompt Split (SOTA Production Pipeline)
-*Query Decomposition $\to$ Hybrid Retrieval ($k=15$) $\to$ **Jina Reranker v3.5 API** ($top\_n=6$) $\to$ Direct System/Human Prompt Split with Preamble Suppression.*
-
-| Metric | Average Score | Pass Rate | Evaluation Result |
-|:---|:---:|:---:|:---|
-| **Answer Relevancy** | **0.97** | **100.00%** (50/50) | 🏆 **100% Pass Rate** — Preamble suppression eliminated semantic drift completely |
-| **Faithfulness** | **0.98** | **98.00%** (49/50) | 🟢 Flawless factual grounding across multi-page policy documents |
-| **Contextual Precision** | **0.96** | **98.00%** (49/50) | 🟢 Jina Reranker v3.5 prioritizes relevant cross-paragraph context |
-| **Contextual Recall** | **0.96** | **92.00%** (46/50) | 🚀 Expanded top-6 context horizon captures multi-clause policies |
-
-- **Total Test Cases Passed**: **44 / 50 (88.00%)** *(+16% overall gain over baseline)*
-- **RBAC Security & Boundary Isolation**: **36/36 checks passed (100% Isolation Enforced)**
-
-<p align="center">
-  <img src="screenshots/jina_cli.png" alt="Jina Reranker Benchmark CLI" width="90%" />
-</p>
-<p align="center">
-  <img src="screenshots/jina_dash.png" alt="Jina Reranker Confident Dashboard" width="90%" />
-</p>
-
----
-
-### 📊 Benchmark Comparison: Evolution Across RAG Stages
+### 🚀 3. DeepEval RAG Benchmarks (50 Test Cases)
+Evaluated with `threshold = 0.70`, judged by Groq LLM (`openai/gpt-oss-120b`):
 
 | Retrieval Strategy | Overall Pass Rate | Faithfulness | Answer Relevancy | Contextual Precision | Contextual Recall |
 |---|:---:|:---:|:---:|:---:|:---:|
@@ -98,38 +82,21 @@ Evaluations were executed using **DeepEval** with industry production threshold 
 | **4. Query Decomposition + CoT** | 86% (43/50) | 0.99 (98%) | 0.95 (92%) | 0.97 (100%) | 0.95 (92%) |
 | **5. Jina Reranker v3.5 + Prompt Split** | **88% (44/50)** 🚀 | 0.98 (98%) | **0.97 (100%)** 🏆 | 0.96 (98%) | 0.96 (92%) |
 
----
-
-## 💰 Semantic Cache Performance
-
-An in-memory **Semantic Cache** (`BAAI/bge-small-en-v1.5` + Qdrant cosine similarity, `threshold=0.78`) is layered in front of the full RAG pipeline to eliminate redundant LLM API calls on warm workloads.
-
-| Metric | Result |
-|:---|:---:|
-| **Cold pipeline latency** | 2.926s (full RAG) |
-| **Cache hit latency** | 0.005s (embedding lookup) |
-| **Speedup on cache hits** | 🔥 **629x faster** |
-| **Identical query hit rate** | **100%** (8/8) |
-| **Semantic paraphrase hit rate** | **100%** (8/8) |
-| **LLM calls eliminated** | **16/16** on warm workload |
-| **Tokens saved** | ~14,400 per workload |
-
-**Key properties:**
-- **Role-aware isolation** — faculty and public queries are cached independently (RBAC never violated)
-- **In-memory only** — resets on restart (no stale answers across deployments)
-- **Zero accuracy loss** — cache only serves previously validated answers
-
-```powershell
-# Reproduce cache benchmark
-uv run python benchmark_cache.py
-```
+- **RBAC Security & Boundary Isolation**: **36/36 checks passed (100% Isolation Enforced)**
 
 ---
 
-## 🛡️ Multi-Tenant RBAC Architecture & Access Tiers
+## 🛡️ Multi-Tenant RBAC Security Architecture
 
-The system enforces hierarchical multi-tenancy using Qdrant **Payload-based Partitioning** on `metadata.tier`:
+### 1. Structured Database Partitioning (SQLite)
+Each role queries an isolated database table with restricted column exposure:
+- **`students_public`**: Non-sensitive enrollment & hall ticket clearance (`pin_number`, `branch`, `semester`, `hall_ticket_status`).
+- **`students_faculty`**: Adds academic & placement standing (`student_name`, `cgpa`, `backlogs`, `attendance_percentage`, `placed_company`, `placement_package_lpa`). Fee dues and disciplinary notes are excluded.
+- **`students_advisor`**: Adds financial records & scholarship information (`tuition_fee_due`, `scholarship_type`, `hostel_fee_due`, `bursar_clearance`). Disciplinary flags are excluded.
+- **`students_dean`**: Complete governance access including disciplinary flags and confidential audit logs.
 
+### 2. Unstructured Document Partitioning (Qdrant Payload)
+Qdrant vector payloads are tagged with `metadata.tier` and filtered via boolean search constraints before retrieval:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                       Dean Access                           │
@@ -146,39 +113,39 @@ The system enforces hierarchical multi-tenancy using Qdrant **Payload-based Part
 └─────────────────────────────────────────────────────────────┘
 ```
 
-| User Role | Accessible Document Tiers | Total Indexed Chunks |
-|---|---|:---:|
-| `public` (Students / Guests) | `public` | 71 chunks |
-| `faculty` (Instructors / TAs) | `public`, `faculty` | 132 chunks |
-| `advisor` (Academic Advisors) | `public`, `faculty`, `advisor` | 174 chunks |
-| `dean` (Department Heads / Execs) | `public`, `faculty`, `advisor`, `dean` | **215 chunks** |
-
 ---
 
 ## 📁 Repository Structure
 
 ```
 RAG/
-├── data/                             # Academic & administrative policy PDFs
-│   ├── public/                       # Public domain policies & calendars
-│   ├── faculty/                      # Answer keys, lesson plans & rubrics
-│   ├── advisor/                      # Advising logs, financial aid & standing
-│   └── dean/                         # Strategic plans, tenure & disciplinary
+├── data/                             # Dataset storage
+│   ├── students.csv                  # 200 synthetic Indian student records (35 fields)
+│   ├── students.db                   # SQLite database with 4 RBAC role tables
+│   ├── public/                       # Public domain policies & calendars (PDF)
+│   ├── faculty/                      # Answer keys, lesson plans & rubrics (PDF)
+│   ├── advisor/                      # Advising logs, financial aid & standing (PDF)
+│   └── dean/                         # Strategic plans, tenure & disciplinary (PDF)
 ├── src/
 │   ├── config.py                     # Environment, model & database config
+│   ├── observability.py              # Arize Phoenix OpenTelemetry tracing setup
+│   ├── db.py                         # SQLite database initializer & role scoping
+│   ├── graph_router.py               # LangGraph hybrid router + Text-to-SQL engine
 │   ├── ingester.py                   # Recursive PDF loader with tier metadata
-│   ├── retriever.py                  # Role-filtered Qdrant vector store
-│   ├── rag_engine.py                 # Role-aware RAG chain, Groq LLM & cache
+│   ├── retriever.py                  # Role-filtered Qdrant hybrid vector store
+│   ├── rag_engine.py                 # RAG pipeline: Decompose -> Retrieve -> Jina Rerank
 │   ├── cache.py                      # In-memory semantic cache (BGE + Qdrant)
 │   └── main.py                       # FastAPI REST API endpoints
 ├── test/
-│   └── QA.json                       # 50 realistic, conversational test cases
+│   └── QA.json                       # 50 ground-truth evaluation test cases
 ├── scripts/
+│   ├── gen_students_csv.py           # Synthetic Indian student records generator
 │   ├── gen_data.py                   # Multi-page ReportLab PDF data generator
 │   ├── test_groq.py                  # Groq API sanity check
 │   └── test_query.py                 # Retriever & RAG diagnostic tool
-├── benchmark.py                      # DeepEval & RBAC isolation test runner
-├── benchmark_cache.py                # Semantic cache performance benchmark
+├── benchmark_router.py               # Router accuracy & SQL RBAC benchmark
+├── benchmark_cache.py                # Semantic cache latency & hit rate benchmark
+├── benchmark.py                      # DeepEval 50 Q&A benchmark & RBAC leak checker
 └── README.md                         # Project documentation & metrics
 ```
 
@@ -199,27 +166,41 @@ JINA_API_KEY=jina_your_jina_api_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
 QDRANT_PATH=./qdrant_db
 COLLECTION_NAME=univ_hybrid_rag
+
+# LangSmith Observability & Tracing
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+LANGCHAIN_API_KEY=lsv2_pt_your_key_here
+LANGCHAIN_PROJECT=univ-rbac-rag
 ```
 
-### 3. Ingest Documents
+### 3. Generate Datasets & Ingest
 ```powershell
-# (Optional) Generate the 12 comprehensive PDFs:
-uv run python scripts/gen_data.py
+# 1. Generate 200 Indian student records CSV:
+uv run python scripts/gen_students_csv.py
 
-# Ingest and index documents with RBAC metadata tags:
+# 2. Ingest PDFs into Qdrant Vector Database:
 uv run python -m src.ingester
 ```
 
 ### 4. Run Benchmarks
 ```powershell
-# Full RAG accuracy + RBAC isolation (50 test cases):
-uv run python benchmark.py
+# Benchmark 1: LangGraph Router & SQL RBAC (100% Accuracy):
+uv run python benchmark_router.py
 
-# Semantic cache performance (latency, speedup, hit rates):
+# Benchmark 2: In-Memory Semantic Cache (629x Speedup):
 uv run python benchmark_cache.py
+
+# Benchmark 3: Full DeepEval RAG Accuracy (88% SOTA):
+uv run python benchmark.py
 ```
 
-### 5. Launch FastAPI Server
+### 5. Launch Interactive Streamlit UI (RBAC Portal)
+```powershell
+uv run streamlit run app.py
+```
+
+### 6. Launch FastAPI Server
 ```powershell
 uv run uvicorn src.main:app --reload
 ```
@@ -228,37 +209,34 @@ uv run uvicorn src.main:app --reload
 
 ## 🔌 API Usage
 
-### Role-Based Query Endpoint (`POST /query`)
+### Hybrid Query Endpoint (`POST /query`)
 
-#### Example: Public Student Query
+#### 1. Structured SQL Analytics (e.g. Faculty Placement Query)
 ```bash
 curl -X POST http://127.0.0.1:8000/query \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "What is the minimum attendance required to appear for end-sem exams?",
-    "role": "public",
-    "k": 4
+    "question": "What is the highest placement package achieved and which student received it?",
+    "role": "faculty"
   }'
 ```
 
-#### Example: Faculty Query (Exams & Answer Keys)
+#### 2. Unstructured Policy Query (e.g. Public Student Query)
 ```bash
 curl -X POST http://127.0.0.1:8000/query \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "How do you formally prove Armstrong Transitivity Axiom?",
-    "role": "faculty",
-    "k": 4
+    "question": "What are the hostel quiet hours and gate closure timings?",
+    "role": "public"
   }'
 ```
 
-#### Example: Dean Query (Confidential Dossiers & Strategic Plans)
+#### 3. Sensitive Governance Query (e.g. Dean Disciplinary Query)
 ```bash
 curl -X POST http://127.0.0.1:8000/query \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "What research and teaching achievements led to the tenure recommendation for Dr. Elena Marsh?",
-    "role": "dean",
-    "k": 4
+    "question": "List all students with active disciplinary flags.",
+    "role": "dean"
   }'
 ```
