@@ -1,14 +1,15 @@
+"""
+app.py — Production Streamlit Client connected to FastAPI Backend (main.py).
+"""
 import os
+import httpx
 import streamlit as st
 from dotenv import load_dotenv
 
-from src.db import init_db
-from src.graph_router import orchestrator
-
 load_dotenv()
 
-# Initialize SQLite database & RBAC tables on startup
-init_db()
+# ── Backend Configuration ─────────────────────────────────────────────────────
+API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 st.set_page_config(
     page_title="University Multi-Tenant Intelligence",
@@ -17,14 +18,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── User Accounts & Role Mapping ─────────────────────────────────────────────
-USERS = {
+# ── Generic University Role Portals ───────────────────────────────────────────
+PORTALS = {
     "student": {
         "password": os.getenv("STUDENT_PASSWORD", "student123"),
         "role": "public",
-        "name": "Alex Kumar (Student)",
+        "name": "Student Portal",
         "icon": "🎓",
-        "desc": "Public Catalog, Placements & Calendars",
+        "desc": "Public Course Catalog, Placement Statistics, Academic Calendars & Campus Policies",
         "examples": [
             "What are the hostel quiet hours and gate closure timings?",
             "What is the One-Offer Policy during campus placements?",
@@ -36,9 +37,9 @@ USERS = {
     "faculty": {
         "password": os.getenv("FACULTY_PASSWORD", "faculty123"),
         "role": "faculty",
-        "name": "Prof. S. Sharma",
+        "name": "Faculty Portal",
         "icon": "👨‍🏫",
-        "desc": "Academic Scores, Backlogs, Syllabi & Lesson Plans",
+        "desc": "Student CGPA, Active Backlogs, Course Syllabi, Lesson Plans & Grading Rubrics",
         "examples": [
             "What is the average CGPA of students in AI&DS?",
             "How many students in CSE have active backlogs?",
@@ -50,9 +51,9 @@ USERS = {
     "advisor": {
         "password": os.getenv("ADVISOR_PASSWORD", "advisor123"),
         "role": "advisor",
-        "name": "Dr. K. Rao (Advisor)",
+        "name": "Academic Advisor Portal",
         "icon": "🧭",
-        "desc": "Fee Audits, Attendance, Scholarships & Standing",
+        "desc": "Tuition Fee Audits, Student Attendance Tracking, Scholarships & Academic Standing",
         "examples": [
             "Which students have tuition fee due greater than 40000?",
             "How many students have attendance less than 65%?",
@@ -64,9 +65,9 @@ USERS = {
     "dean": {
         "password": os.getenv("DEAN_PASSWORD", "dean123"),
         "role": "dean",
-        "name": "Dean M. Murthy",
+        "name": "Dean / Executive Portal",
         "icon": "🏛️",
-        "desc": "Executive Governance, Disciplinary & Strategic Oversight",
+        "desc": "Institutional Governance, Full Student Database, Disciplinary Records & Strategic Oversight",
         "examples": [
             "List students with active disciplinary flags.",
             "What is the faculty sabbatical compensation policy?",
@@ -80,16 +81,35 @@ USERS = {
 # ── Session State Management ──────────────────────────────────────────────────
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "user" not in st.session_state:
-    st.session_state.user = None
+if "portal_key" not in st.session_state:
+    st.session_state.portal_key = "student"
 if "role" not in st.session_state:
     st.session_state.role = "public"
-if "name" not in st.session_state:
-    st.session_state.name = ""
+if "portal_name" not in st.session_state:
+    st.session_state.portal_name = "Student Portal"
 if "icon" not in st.session_state:
     st.session_state.icon = "🎓"
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+
+# ── API Client Helper ─────────────────────────────────────────────────────────
+def call_backend_query(question: str, role: str) -> tuple[bool, dict | str]:
+    """Sends HTTP POST request to FastAPI /query endpoint."""
+    try:
+        r = httpx.post(
+            f"{API_BASE_URL}/query",
+            json={"question": question, "role": role},
+            timeout=35.0,
+        )
+        if r.status_code == 200:
+            return True, r.json()
+        error_detail = r.json().get("detail", "Backend query error.")
+        return False, error_detail
+    except httpx.ConnectError:
+        return False, f"Could not connect to FastAPI backend at `{API_BASE_URL}`. Make sure `uv run uvicorn main:app --port 8000` is running."
+    except Exception as e:
+        return False, f"Network error: {str(e)}"
 
 
 # ── Dialog for Login Alerts ───────────────────────────────────────────────────
@@ -112,6 +132,7 @@ def render_login():
             """
             <div style="text-align: center; margin-bottom: 20px;">
                 <h1 style="margin-bottom: 0;">🏛️ University Portal</h1>
+                <p style="color: #888; font-size: 0.95rem;">Multi-Tenant Hybrid Intelligence (FastAPI Backend + Text-to-SQL + Agentic RAG)</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -119,17 +140,20 @@ def render_login():
 
         with st.form("sign_in"):
             st.subheader("Sign In")
-            st.caption("Enter your role-based credentials to access the intelligent assistant.")
-            # st.divider()
+            st.caption("Select your role portal and authenticate to access scoped university intelligence.")
 
-            username = st.text_input("Username", placeholder="e.g., student, faculty, advisor, dean")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            portal_choice = st.selectbox(
+                "Select Role Portal",
+                options=list(PORTALS.keys()),
+                format_func=lambda k: f"{PORTALS[k]['icon']} {PORTALS[k]['name']}",
+            )
+            password = st.text_input("Portal Password", type="password", placeholder="Enter portal password")
 
-            submit_btn = st.form_submit_button(label="Sign In", type="primary", use_container_width=True)
+            submit_btn = st.form_submit_button(label="Access Portal", type="primary", use_container_width=True)
 
             col_rem, col_forgot = st.columns(2)
             with col_rem:
-                st.checkbox("Remember me")
+                st.checkbox("Remember credentials")
             with col_forgot:
                 st.markdown(
                     "<p style='text-align: right; margin-top: 5px;'><a href='#' style='color: #4B9CD3; text-decoration: none;'>Forgot password?</a></p>",
@@ -137,62 +161,73 @@ def render_login():
                 )
 
         if submit_btn:
-            usr = username.strip().lower()
-            if not usr or not password:
-                show_login_alert("Please enter both username and password.")
-            elif usr in USERS and USERS[usr]["password"] == password:
-                user_info = USERS[usr]
+            portal_info = PORTALS[portal_choice]
+            if not password:
+                show_login_alert("Please enter the portal password.")
+            elif portal_info["password"] == password:
                 st.session_state.logged_in = True
-                st.session_state.user = usr
-                st.session_state.role = user_info["role"]
-                st.session_state.name = user_info["name"]
-                st.session_state.icon = user_info["icon"]
+                st.session_state.portal_key = portal_choice
+                st.session_state.role = portal_info["role"]
+                st.session_state.portal_name = portal_info["name"]
+                st.session_state.icon = portal_info["icon"]
                 st.session_state.messages = []
                 st.rerun()
             else:
-                show_login_alert("Invalid username or password. Please check the demo credentials below.")
+                show_login_alert("Invalid portal password. Please check the credentials directory below.")
 
-        # Quick Demo Logins
+        # Quick 1-Click Demo Logins
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### 🔑 Quick Demo Logins")
+        st.markdown("##### ⚡ Quick 1-Click Demo Logins")
         demo_cols = st.columns(4)
-        for i, (key, info) in enumerate(USERS.items()):
+        for i, (key, info) in enumerate(PORTALS.items()):
             with demo_cols[i]:
-                if st.button(f"{info['icon']} {key.title()}", use_container_width=True, help=f"Password: {info['password']}"):
+                if st.button(f"{info['icon']} {info['name'].split()[0]}", use_container_width=True, help=f"Password: {info['password']}"):
                     st.session_state.logged_in = True
-                    st.session_state.user = key
+                    st.session_state.portal_key = key
                     st.session_state.role = info["role"]
-                    st.session_state.name = info["name"]
+                    st.session_state.portal_name = info["name"]
                     st.session_state.icon = info["icon"]
                     st.session_state.messages = []
                     st.rerun()
 
         with st.expander("ℹ️ Role-Based Credentials Directory"):
             st.table([
-                {"Role Tier": "Public / Student", "Username": "student", "Password": "student123", "Access Level": "Public docs & basic student directory"},
-                {"Role Tier": "Faculty", "Username": "faculty", "Password": "faculty123", "Access Level": "CGPA, Backlogs, Lesson plans & answer keys"},
-                {"Role Tier": "Advisor", "Username": "advisor", "Password": "advisor123", "Access Level": "Tuition fees, Attendance audits & scholarships"},
-                {"Role Tier": "Dean (Executive)", "Username": "dean", "Password": "dean123", "Access Level": "Full SQL database, Disciplinary records & policies"},
+                {"Role Portal": "Student Portal", "Role Code": "public", "Default Password": "student123", "Access Level": "Public docs, catalog, placement stats"},
+                {"Role Portal": "Faculty Portal", "Role Code": "faculty", "Default Password": "faculty123", "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
+                {"Role Portal": "Advisor Portal", "Role Code": "advisor", "Default Password": "advisor123", "Access Level": "Tuition fees, attendance audits & scholarships"},
+                {"Role Portal": "Dean Portal", "Role Code": "dean", "Default Password": "dean123", "Access Level": "Full database, disciplinary logs & tenure governance"},
             ])
 
 
 # ── 2. CHAT INTERFACE ─────────────────────────────────────────────────────────
 def render_chat():
-    user_info = USERS.get(st.session_state.user, USERS["student"])
+    portal_info = PORTALS.get(st.session_state.portal_key, PORTALS["student"])
 
     # Sidebar
     with st.sidebar:
-        st.markdown(f"### {st.session_state.icon} {st.session_state.name}")
-        st.caption(f"**Role:** `{st.session_state.role.upper()}`")
-        st.info(f"**Permissions:**\n{user_info['desc']}")
+        st.markdown(f"### {st.session_state.icon} {st.session_state.portal_name}")
+        st.caption(f"**Security Context:** `{st.session_state.role.upper()}`")
+        st.info(f"**Permissions:**\n{portal_info['desc']}")
+
+        st.markdown(
+            f"""
+            <div style="background-color: #2ECC7115; border: 1px solid #2ECC7144; border-radius: 6px; padding: 6px 10px; margin-bottom: 12px;">
+                <span style="color: #2ECC71; font-size: 0.78rem; font-weight: 600;">⚡ Connected to FastAPI: <code>{API_BASE_URL}</code></span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         st.divider()
         st.markdown("##### 📋 Sample Questions")
-        for q in user_info.get("examples", []):
+        for q in portal_info.get("examples", []):
             if st.button(q, key=f"btn_{q[:20]}", use_container_width=True):
                 st.session_state.messages.append({"role": "user", "content": q})
-                res = orchestrator.invoke(q, role=st.session_state.role)
-                st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
+                success, res = call_backend_query(q, st.session_state.role)
+                if success:
+                    st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
+                else:
+                    st.session_state.messages.append({"role": "assistant", "content": f"⚠️ {res}", "meta": None})
                 st.rerun()
 
         st.divider()
@@ -204,15 +239,14 @@ def render_chat():
         with col_logout:
             if st.button("🚪 Logout", type="primary", use_container_width=True):
                 st.session_state.logged_in = False
-                st.session_state.user = None
                 st.session_state.messages = []
                 st.rerun()
 
-    # Title and description
+    # Main Chat View Header
     st.markdown(
-        """
+        f"""
         <h1 style='text-align:center'>
-            <span style='color:#00b3ff;'>🏛️ University Multi-Tenant AI Assistant</span>
+            <span style='color:#00b3ff;'>{st.session_state.icon} {st.session_state.portal_name} Assistant</span>
         </h1>
         """,
         unsafe_allow_html=True,
@@ -237,6 +271,9 @@ def render_chat():
                         <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
                             { '⚡ Semantic Cache (<5ms)' if cache_hit else src }
                         </span>
+                        <span style="background-color: #88888822; color: #888; border: 1px solid #88888844; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500;">
+                            Role: {st.session_state.role.upper()}
+                        </span>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -255,30 +292,37 @@ def render_chat():
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            res = orchestrator.invoke(prompt, role=st.session_state.role)
-            st.markdown(res["answer"])
-            src = res.get("source_type", "System")
-            cache_hit = res.get("cache_hit", False)
-            badge_color = "#2ECC71" if src == "SQL Database" else "#3498DB"
-            if cache_hit:
-                badge_color = "#F39C12"
+            success, res = call_backend_query(prompt, st.session_state.role)
+            if success:
+                st.markdown(res["answer"])
+                src = res.get("source_type", "System")
+                cache_hit = res.get("cache_hit", False)
+                badge_color = "#2ECC71" if src == "SQL Database" else "#3498DB"
+                if cache_hit:
+                    badge_color = "#F39C12"
 
-            st.markdown(
-                f"""
-                <div style="display: flex; gap: 8px; margin-top: 8px;">
-                    <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
-                        { '⚡ Semantic Cache (<5ms)' if cache_hit else src }
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                st.markdown(
+                    f"""
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
+                            { '⚡ Semantic Cache (<5ms)' if cache_hit else src }
+                        </span>
+                        <span style="background-color: #88888822; color: #888; border: 1px solid #88888844; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500;">
+                            Role: {st.session_state.role.upper()}
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            if res.get("sql_query"):
-                with st.expander("🔍 Executed SQL Query"):
-                    st.code(res["sql_query"], language="sql")
+                if res.get("sql_query"):
+                    with st.expander("🔍 Executed SQL Query"):
+                        st.code(res["sql_query"], language="sql")
 
-        st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
+                st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
+            else:
+                st.error(f"Error: {res}")
+                st.session_state.messages.append({"role": "assistant", "content": f"⚠️ {res}", "meta": None})
 
 
 # ── 3. MAIN ROUTER ───────────────────────────────────────────────────────────

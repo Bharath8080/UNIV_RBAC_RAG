@@ -143,7 +143,8 @@ RAG/
 ├── scripts/
 │   ├── gen_students_csv.py           # Synthetic Indian student records generator
 │   └── gen_data.py                   # Multi-page ReportLab PDF data generator
-├── app.py                            # Streamlit Multi-Tenant RBAC Chat UI
+├── main.py                           # Production FastAPI Backend Service (REST API)
+├── app.py                            # Streamlit Multi-Tenant RBAC Chat UI (Frontend Client)
 └── README.md                         # Project documentation & metrics
 ```
 
@@ -193,7 +194,38 @@ uv run python test/cache.py
 uv run python test/eval.py
 ```
 
-### 5. Launch Interactive Streamlit UI (RBAC Portal)
+### 5. Launch FastAPI Backend Server
+```powershell
+uv run uvicorn main:app --port 8000 --reload
+```
+
+### 6. Launch Streamlit Frontend Client (RBAC Portal)
 ```powershell
 uv run streamlit run app.py
+```
+
+---
+
+## 🔌 API Documentation
+
+### Hybrid Query Endpoint (`POST /query`)
+
+#### 1. Structured SQL Query (Faculty Role)
+```bash
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is the average CGPA of students in AI&DS?",
+    "role": "faculty"
+  }'
+```
+
+#### 2. Unstructured Policy Query (Student / Public Role)
+```bash
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is the One-Offer Policy during campus placements?",
+    "role": "public"
+  }'
 ```
