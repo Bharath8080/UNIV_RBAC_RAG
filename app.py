@@ -59,7 +59,7 @@ PORTALS = {
             "How many students have attendance less than 65%?",
             "List students on Merit-cum-Means scholarship.",
             "What are the mandatory steps for students on Academic Probation?",
-            "What is the attendance threshold required for scholarship renewal?",
+            "What is the CGPA requirement for Presidential Merit Fellowship renewal?",
         ],
     },
     "dean": {
@@ -69,11 +69,11 @@ PORTALS = {
         "icon": "🏛️",
         "desc": "Institutional Governance, Full Student Database, Disciplinary Records & Strategic Oversight",
         "examples": [
-            "List students with active disciplinary flags.",
+            "How many students are enrolled in each branch?",
             "What is the faculty sabbatical compensation policy?",
             "What is the highest placement package achieved and who received it?",
-            "What are the minimum requirements for faculty tenure review?",
-            "What are the penalties for Category-3 disciplinary violations?",
+            "What is the budget for the AI Supercomputing Center?",
+            "What is the appeal timeline for Disciplinary Committee decisions?",
         ],
     },
 }
@@ -95,21 +95,18 @@ if "messages" not in st.session_state:
 
 # ── API Client Helper ─────────────────────────────────────────────────────────
 def call_backend_query(question: str, role: str) -> tuple[bool, dict | str]:
-    """Sends HTTP POST request to FastAPI /query endpoint."""
+    """Sends HTTP POST request to FastAPI /query endpoint without timeout limits."""
     try:
         r = httpx.post(
             f"{API_BASE_URL}/query",
             json={"question": question, "role": role},
-            timeout=35.0,
+            timeout=None,
         )
         if r.status_code == 200:
             return True, r.json()
-        error_detail = r.json().get("detail", "Backend query error.")
-        return False, error_detail
-    except httpx.ConnectError:
-        return False, f"Could not connect to FastAPI backend at `{API_BASE_URL}`. Make sure `uv run uvicorn main:app --port 8000` is running."
+        return False, r.json().get("detail", "Backend query error.")
     except Exception as e:
-        return False, f"Network error: {str(e)}"
+        return False, str(e)
 
 
 # ── Dialog for Login Alerts ───────────────────────────────────────────────────

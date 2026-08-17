@@ -15,7 +15,8 @@ llm = ChatGroq(
     model=GROQ_MODEL,
     groq_api_key=GROQ_API_KEY,
     temperature=0,
-    streaming=True,
+    reasoning_format="parsed",
+    max_retries=2,
 )
 
 # Query Decomposition prompt — breaks complex questions into focused sub-queries
@@ -95,7 +96,7 @@ def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):
 
 
 def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> Dict[str, Any]:
-    # Cache check — skip entire pipeline if a semantically identical question was already answered
+    # Cache check
     cached_answer = semantic_cache.get(question, role)
     if cached_answer is not None:
         return {
@@ -106,10 +107,10 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
             "cache_hit": True,
         }
 
-    # Stage 1: Query Decomposition — break complex/multi-hop questions into sub-queries
+    # Stage 1: Query Decomposition
     sub_queries = decompose_query(question)
 
-    # Stage 2: Hybrid retrieval per sub-query — deduplicate by document ID
+    # Stage 2: Hybrid retrieval per sub-query
     retriever = get_retriever(role=role, k=k)
     seen_ids: set = set()
     all_docs: List[Document] = []
@@ -120,15 +121,14 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
                 seen_ids.add(doc_id)
                 all_docs.append(doc)
 
-    # Stage 3: Jina Reranker v3.5 — score merged pool, keep top RERANK_TOP_N
+    # Stage 3: Jina Reranker v3.5
     reranked_docs = rerank_docs(question, all_docs, top_n=RERANK_TOP_N)
 
-    # Stage 4: CoT Answer generation with reranked context
+    # Stage 4: Answer generation
     context_text = format_docs(reranked_docs)
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
 
-    # Store result in cache for future similar queries
     semantic_cache.set(question, role, answer)
 
     return {
