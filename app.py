@@ -1,15 +1,18 @@
 """
-app.py — Production Streamlit Client connected to FastAPI Backend (main.py).
+app.py — Production Multi-Tenant Hybrid Intelligence Dashboard (Streamlit).
 """
 import os
-import httpx
 import streamlit as st
 from dotenv import load_dotenv
 
+from src.db import init_db
+from src.graph_router import orchestrator
+from src.cache import semantic_cache
+
 load_dotenv()
 
-# ── Backend Configuration ─────────────────────────────────────────────────────
-API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+# Initialize role-partitioned database tables on startup
+init_db()
 
 st.set_page_config(
     page_title="University Multi-Tenant Intelligence",
@@ -93,18 +96,12 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-# ── API Client Helper ─────────────────────────────────────────────────────────
+# ── Query Execution Helper ───────────────────────────────────────────────────
 def call_backend_query(question: str, role: str) -> tuple[bool, dict | str]:
-    """Sends HTTP POST request to FastAPI /query endpoint without timeout limits."""
+    """Executes hybrid query directly via orchestrator without HTTP overhead."""
     try:
-        r = httpx.post(
-            f"{API_BASE_URL}/query",
-            json={"question": question, "role": role},
-            timeout=None,
-        )
-        if r.status_code == 200:
-            return True, r.json()
-        return False, r.json().get("detail", "Backend query error.")
+        res = orchestrator.invoke(question=question, role=role.lower())
+        return True, res
     except Exception as e:
         return False, str(e)
 
@@ -129,7 +126,6 @@ def render_login():
             """
             <div style="text-align: center; margin-bottom: 20px;">
                 <h1 style="margin-bottom: 0;">🏛️ University Portal</h1>
-                <p style="color: #888; font-size: 0.95rem;">Multi-Tenant Hybrid Intelligence (FastAPI Backend + Text-to-SQL + Agentic RAG)</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -147,15 +143,6 @@ def render_login():
             password = st.text_input("Portal Password", type="password", placeholder="Enter portal password")
 
             submit_btn = st.form_submit_button(label="Access Portal", type="primary", use_container_width=True)
-
-            col_rem, col_forgot = st.columns(2)
-            with col_rem:
-                st.checkbox("Remember credentials")
-            with col_forgot:
-                st.markdown(
-                    "<p style='text-align: right; margin-top: 5px;'><a href='#' style='color: #4B9CD3; text-decoration: none;'>Forgot password?</a></p>",
-                    unsafe_allow_html=True,
-                )
 
         if submit_btn:
             portal_info = PORTALS[portal_choice]
@@ -206,15 +193,6 @@ def render_chat():
         st.caption(f"**Security Context:** `{st.session_state.role.upper()}`")
         st.info(f"**Permissions:**\n{portal_info['desc']}")
 
-        st.markdown(
-            f"""
-            <div style="background-color: #2ECC7115; border: 1px solid #2ECC7144; border-radius: 6px; padding: 6px 10px; margin-bottom: 12px;">
-                <span style="color: #2ECC71; font-size: 0.78rem; font-weight: 600;">⚡ Connected to FastAPI: <code>{API_BASE_URL}</code></span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         st.divider()
         st.markdown("##### 📋 Sample Questions")
         for q in portal_info.get("examples", []):
@@ -238,6 +216,10 @@ def render_chat():
                 st.session_state.logged_in = False
                 st.session_state.messages = []
                 st.rerun()
+
+        if st.button("🧹 Clear Cache", use_container_width=True, help="Clears the semantic cache so next queries run fresh through RAG/SQL"):
+            semantic_cache.reset()
+            st.toast("✅ Semantic cache cleared!", icon="🧹")
 
     # Main Chat View Header
     st.markdown(
