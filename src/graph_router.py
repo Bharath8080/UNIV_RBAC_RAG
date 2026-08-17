@@ -1,6 +1,3 @@
-"""
-src/graph_router.py — Production Multi-Tenant Hybrid Router & Direct Text-to-SQL Engine.
-"""
 from __future__ import annotations
 import re
 import sqlite3

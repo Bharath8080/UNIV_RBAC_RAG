@@ -1,12 +1,3 @@
-"""
-src/cache.py — In-Memory Semantic Cache for RAG cost optimization.
-
-Uses BAAI/bge-small-en-v1.5 (same model as the retriever) to embed questions
-and stores answers in an in-memory Qdrant collection. Role-aware: faculty and
-public questions are cached independently so RBAC is never violated.
-
-Cache lifecycle: per-process only (resets on restart — intentional).
-"""
 import uuid
 from typing import Optional
 

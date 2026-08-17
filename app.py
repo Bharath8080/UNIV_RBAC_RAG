@@ -1,6 +1,3 @@
-"""
-app.py — Production Multi-Tenant Hybrid Intelligence Dashboard (Streamlit).
-"""
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -78,6 +75,14 @@ PORTALS = {
             "What is the budget for the AI Supercomputing Center?",
             "What is the appeal timeline for Disciplinary Committee decisions?",
         ],
+    },
+    "admin": {
+        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
+        "role": "admin",
+        "name": "Admin Portal",
+        "icon": "⚙️",
+        "desc": "Knowledge Base Vector Database Management (Upload, Delete & List PDFs by RBAC Tier)",
+        "examples": [],
     },
 }
 
@@ -162,7 +167,7 @@ def render_login():
         # Quick 1-Click Demo Logins
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### ⚡ Quick 1-Click Demo Logins")
-        demo_cols = st.columns(4)
+        demo_cols = st.columns(5)
         for i, (key, info) in enumerate(PORTALS.items()):
             with demo_cols[i]:
                 if st.button(f"{info['icon']} {info['name'].split()[0]}", use_container_width=True, help=f"Password: {info['password']}"):
@@ -180,6 +185,7 @@ def render_login():
                 {"Role Portal": "Faculty Portal", "Role Code": "faculty", "Default Password": "faculty123", "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
                 {"Role Portal": "Advisor Portal", "Role Code": "advisor", "Default Password": "advisor123", "Access Level": "Tuition fees, attendance audits & scholarships"},
                 {"Role Portal": "Dean Portal", "Role Code": "dean", "Default Password": "dean123", "Access Level": "Full database, disciplinary logs & tenure governance"},
+                {"Role Portal": "Admin Portal", "Role Code": "admin", "Default Password": "admin123", "Access Level": "Vector DB document ingestion/deletion by RBAC tier"},
             ])
 
 
@@ -304,10 +310,85 @@ def render_chat():
                 st.session_state.messages.append({"role": "assistant", "content": f"⚠️ {res}", "meta": None})
 
 
-# ── 3. MAIN ROUTER ───────────────────────────────────────────────────────────
+# ── 3. ADMIN CONTROL PANEL ───────────────────────────────────────────────────
+def render_admin():
+    from src.admin import list_indexed_docs, delete_doc, ingest_uploaded_pdf
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown(f"### ⚙️ Admin Control Panel")
+        st.caption(f"**Security Context:** `ADMIN`")
+        st.info("**Permissions:** Full administrative control over Qdrant Vector DB knowledge base documents.")
+
+        st.divider()
+        col_clear, col_logout = st.columns(2)
+        with col_clear:
+            if st.button("🗑️ Clear", use_container_width=True):
+                st.session_state.messages = []
+                st.rerun()
+        with col_logout:
+            if st.button("🚪 Logout", type="primary", use_container_width=True):
+                st.session_state.logged_in = False
+                st.session_state.messages = []
+                st.rerun()
+
+        if st.button("🧹 Clear Cache", use_container_width=True, help="Clears semantic cache"):
+            semantic_cache.reset()
+            st.toast("✅ Semantic cache cleared!", icon="🧹")
+
+    # Main Header
+    st.markdown("<h1 style='text-align:center'><span style='color:#00b3ff;'>⚙️ Knowledge Base Admin Console</span></h1>", unsafe_allow_html=True)
+    st.caption("Manage Qdrant Vector DB embeddings, view indexed policies by tier, and safely ingest or delete documents.")
+    st.write("")
+
+    st.subheader("📚 Currently Indexed Documents in Qdrant")
+    docs = list_indexed_docs()
+    if not docs:
+        st.info("No documents currently indexed in Qdrant Vector DB.")
+    else:
+        st.dataframe(
+            [{"Document Name": d["source_doc"], "RBAC Tier": d["tier"].upper(), "Vector Chunks": d["chunks"]} for d in docs],
+            width="stretch",
+        )
+
+        st.write("")
+        st.markdown("##### 🗑️ Delete Specific Document from Vector DB")
+        col_sel, col_del = st.columns([3, 1])
+        with col_sel:
+            doc_options = [f"{d['source_doc']} ({d['tier'].upper()})" for d in docs]
+            doc_to_delete = st.selectbox("Select Document to Remove", options=doc_options, key="sel_doc_delete")
+        with col_del:
+            st.write("")
+            st.write("")
+            if st.button("🗑️ Delete Document", type="primary", use_container_width=True):
+                chosen_doc = next(d for d in docs if f"{d['source_doc']} ({d['tier'].upper()})" == doc_to_delete)
+                delete_doc(chosen_doc["source_doc"], chosen_doc["tier"])
+                st.success(f"✅ Successfully deleted `{chosen_doc['source_doc']}` from {chosen_doc['tier'].upper()} tier in Qdrant!")
+                st.rerun()
+
+    st.divider()
+    st.subheader("📤 Ingest New PDF Document")
+    st.caption("Upload a new PDF to automatically split, embed, and index it into the selected role tier.")
+    col_file, col_tier = st.columns([3, 1])
+    with col_file:
+        uploaded_pdf = st.file_uploader("Choose a PDF file", type=["pdf"], key="admin_pdf_uploader")
+    with col_tier:
+        target_tier = st.selectbox("Select Target Tier", options=["public", "faculty", "advisor", "dean"], format_func=lambda t: f"{t.upper()} Tier")
+
+    if uploaded_pdf is not None:
+        if st.button("📥 Ingest Document to Vector DB", type="primary", use_container_width=True):
+            with st.spinner(f"Chunking, embedding and indexing into Qdrant ({target_tier.upper()} tier)..."):
+                chunk_count = ingest_uploaded_pdf(uploaded_pdf.getvalue(), uploaded_pdf.name, target_tier)
+            st.success(f"✅ Successfully indexed `{uploaded_pdf.name}` into **{target_tier.upper()}** tier ({chunk_count} chunks)!")
+            st.rerun()
+
+
+# ── 4. MAIN ROUTER ───────────────────────────────────────────────────────────
 def main():
     if not st.session_state.logged_in:
         render_login()
+    elif st.session_state.role == "admin":
+        render_admin()
     else:
         render_chat()
 

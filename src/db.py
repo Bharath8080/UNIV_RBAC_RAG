@@ -1,10 +1,6 @@
-"""
-src/db.py — Role-partitioned SQLite database for student records.
-"""
 import csv
 import sqlite3
 from pathlib import Path
-from langchain_community.utilities import SQLDatabase
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "students.db"
 CSV_PATH = Path(__file__).resolve().parent.parent / "data" / "students.csv"
@@ -17,23 +13,23 @@ ROLE_TABLES = {
 }
 
 COL_TYPES = {
-    "pin_number": "TEXT",
-    "student_name": "TEXT",
-    "branch": "TEXT",
-    "current_semester": "INTEGER",
-    "cgpa": "REAL",
-    "active_backlogs": "INTEGER",
+    "pin_number":            "TEXT",
+    "student_name":          "TEXT",
+    "branch":                "TEXT",
+    "current_semester":      "INTEGER",
+    "cgpa":                  "REAL",
+    "active_backlogs":       "INTEGER",
     "attendance_percentage": "REAL",
-    "hall_ticket_status": "TEXT",
-    "tuition_fee_due": "INTEGER",
-    "scholarship_type": "TEXT",
-    "placed_company": "TEXT",
+    "hall_ticket_status":    "TEXT",
+    "tuition_fee_due":       "INTEGER",
+    "scholarship_type":      "TEXT",
+    "placed_company":        "TEXT",
     "placement_package_lpa": "REAL",
-    "disciplinary_flag": "INTEGER",
+    "disciplinary_flag":     "INTEGER",
 }
 
-PUBLIC_COLS = ["pin_number", "student_name", "branch", "current_semester", "hall_ticket_status", "placed_company", "placement_package_lpa"]
-FACULTY_COLS = PUBLIC_COLS + ["cgpa", "active_backlogs", "attendance_percentage"]
+PUBLIC_COLS  = ["pin_number", "student_name", "branch", "current_semester", "hall_ticket_status", "placed_company", "placement_package_lpa"]
+FACULTY_COLS = PUBLIC_COLS  + ["cgpa", "active_backlogs", "attendance_percentage"]
 ADVISOR_COLS = FACULTY_COLS + ["tuition_fee_due", "scholarship_type"]
 DEAN_COLS    = ADVISOR_COLS + ["disciplinary_flag"]
 
@@ -68,19 +64,6 @@ def init_db() -> None:
 
     conn.commit()
     conn.close()
-
-
-def get_db_for_role(role: str = "public") -> SQLDatabase:
-    """Returns a LangChain SQLDatabase scoped to the user's role table."""
-    if not DB_PATH.exists():
-        init_db()
-
-    target_table = ROLE_TABLES.get(role.lower(), "students_public")
-    return SQLDatabase.from_uri(
-        f"sqlite:///{DB_PATH.as_posix()}",
-        include_tables=[target_table],
-        sample_rows_in_table_info=2,
-    )
 
 
 if __name__ == "__main__":
