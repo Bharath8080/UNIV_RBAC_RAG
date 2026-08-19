@@ -33,7 +33,7 @@ RUN uv pip install --system --no-cache -r requirements.txt
 # Bakes the FastEmbed ONNX models into the image so runtime requires 0MB download
 RUN python -c "from fastembed import TextEmbedding, SparseTextEmbedding; \
     TextEmbedding('BAAI/bge-small-en-v1.5', cache_dir='/app/.cache/fastembed'); \
-    SparseTextEmbedding('prithivida/Splade_PP_en_v1', cache_dir='/app/.cache/fastembed')"
+    SparseTextEmbedding('Qdrant/bm25', cache_dir='/app/.cache/fastembed')"
 
 # Copy the rest of the application code
 COPY . .

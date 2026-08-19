@@ -13,8 +13,8 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "univ_hybrid_rag")
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 EMBED_DIM   = 384
 
-# Sparse Embedding (FastEmbed - SPLADE)
-SPARSE_EMBED_MODEL = "prithivida/Splade_PP_en_v1"
+# Sparse Embedding (FastEmbed - BM25 ~5MB ultra-lightweight)
+SPARSE_EMBED_MODEL = "Qdrant/bm25"
 
 # Cross-Encoder Reranker (Jina AI API)
 JINA_RERANK_MODEL = "jina-reranker-v3.5"
