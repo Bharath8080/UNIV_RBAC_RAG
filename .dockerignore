@@ -1,0 +1,35 @@
+# Git and environment
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+
+# IDE & OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing, benchmarks, evaluation
+.deepeval/
+test/
+scratch/
+*.log
+
+# Artifacts & media
+assets/*.png
+assets/*.pdf

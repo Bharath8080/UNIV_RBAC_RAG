@@ -1,15 +1,19 @@
+"""
+app.py — Streamlit frontend for University Multi-Tenant RAG Intelligence System.
+
+Communicates with the FastAPI backend (main.py) via HTTP.
+Set BACKEND_URL env var to point to the API server (default: http://localhost:8000).
+"""
+
 import os
+
+import requests
 import streamlit as st
 from dotenv import load_dotenv
 
-from src.db import init_db
-from src.graph_router import orchestrator
-from src.cache import semantic_cache
-
 load_dotenv()
 
-# Initialize role-partitioned database tables on startup
-init_db()
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(
     page_title="University Multi-Tenant Intelligence",
@@ -101,14 +105,91 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-# ── Query Execution Helper ───────────────────────────────────────────────────
-def call_backend_query(question: str, role: str) -> tuple[bool, dict | str]:
-    """Executes hybrid query directly via orchestrator without HTTP overhead."""
+# ── API Helper Functions ──────────────────────────────────────────────────────
+
+def api_chat(question: str, role: str) -> tuple[bool, dict | str]:
+    """Send a question to the FastAPI backend and return the response."""
     try:
-        res = orchestrator.invoke(question=question, role=role.lower())
-        return True, res
+        resp = requests.post(
+            f"{BACKEND_URL}/api/chat",
+            json={"question": question, "role": role},
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return True, resp.json()
+    except requests.exceptions.ConnectionError:
+        return False, f"Cannot connect to backend at {BACKEND_URL}. Is FastAPI running?"
+    except requests.exceptions.Timeout:
+        return False, "Request timed out. The agent is taking too long."
+    except requests.exceptions.HTTPError as e:
+        detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+        return False, f"API error: {detail}"
     except Exception as e:
         return False, str(e)
+
+
+def api_list_docs() -> list[dict]:
+    """Fetch the list of indexed documents from the FastAPI backend."""
+    resp = requests.get(f"{BACKEND_URL}/api/admin/docs", timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_delete_doc(source_doc: str, tier: str) -> None:
+    """Delete a document from the Qdrant vector store via FastAPI."""
+    resp = requests.delete(
+        f"{BACKEND_URL}/api/admin/docs",
+        params={"source_doc": source_doc, "tier": tier},
+        timeout=30,
+    )
+    resp.raise_for_status()
+
+
+def api_ingest_doc(pdf_bytes: bytes, filename: str, tier: str) -> dict:
+    """Upload and ingest a PDF into Qdrant via FastAPI."""
+    resp = requests.post(
+        f"{BACKEND_URL}/api/admin/docs",
+        files={"file": (filename, pdf_bytes, "application/pdf")},
+        data={"tier": tier},
+        timeout=120,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_reset_cache() -> None:
+    """Flush the semantic cache via FastAPI."""
+    resp = requests.post(f"{BACKEND_URL}/api/cache/reset", timeout=10)
+    resp.raise_for_status()
+
+
+# ── Badge Renderer ────────────────────────────────────────────────────────────
+
+def _render_badges(src: str, cache_hit: bool, role: str) -> None:
+    if cache_hit:
+        badge_color = "#F39C12"
+    elif "SQL" in src:
+        badge_color = "#2ECC71"
+    elif "RAG" in src:
+        badge_color = "#3498DB"
+    elif "+" in src:
+        badge_color = "#9B59B6"   # multi-tool: purple
+    else:
+        badge_color = "#888888"
+
+    st.markdown(
+        f"""
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
+                {'⚡ Semantic Cache (<5ms)' if cache_hit else src}
+            </span>
+            <span style="background-color: #88888822; color: #888; border: 1px solid #88888844; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500;">
+                Role: {role.upper()}
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # ── Dialog for Login Alerts ───────────────────────────────────────────────────
@@ -181,11 +262,11 @@ def render_login():
 
         with st.expander("ℹ️ Role-Based Credentials Directory"):
             st.table([
-                {"Role Portal": "Student Portal", "Role Code": "public", "Default Password": "student123", "Access Level": "Public docs, catalog, placement stats"},
-                {"Role Portal": "Faculty Portal", "Role Code": "faculty", "Default Password": "faculty123", "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
-                {"Role Portal": "Advisor Portal", "Role Code": "advisor", "Default Password": "advisor123", "Access Level": "Tuition fees, attendance audits & scholarships"},
-                {"Role Portal": "Dean Portal", "Role Code": "dean", "Default Password": "dean123", "Access Level": "Full database, disciplinary logs & tenure governance"},
-                {"Role Portal": "Admin Portal", "Role Code": "admin", "Default Password": "admin123", "Access Level": "Vector DB document ingestion/deletion by RBAC tier"},
+                {"Role Portal": "Student Portal",  "Role Code": "public",  "Default Password": "student123",  "Access Level": "Public docs, catalog, placement stats"},
+                {"Role Portal": "Faculty Portal",  "Role Code": "faculty", "Default Password": "faculty123",  "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
+                {"Role Portal": "Advisor Portal",  "Role Code": "advisor", "Default Password": "advisor123",  "Access Level": "Tuition fees, attendance audits & scholarships"},
+                {"Role Portal": "Dean Portal",     "Role Code": "dean",    "Default Password": "dean123",     "Access Level": "Full database, disciplinary logs & tenure governance"},
+                {"Role Portal": "Admin Portal",    "Role Code": "admin",   "Default Password": "admin123",    "Access Level": "Vector DB document ingestion/deletion by RBAC tier"},
             ])
 
 
@@ -204,7 +285,7 @@ def render_chat():
         for q in portal_info.get("examples", []):
             if st.button(q, key=f"btn_{q[:20]}", use_container_width=True):
                 st.session_state.messages.append({"role": "user", "content": q})
-                success, res = call_backend_query(q, st.session_state.role)
+                success, res = api_chat(q, st.session_state.role)
                 if success:
                     st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
                 else:
@@ -224,8 +305,11 @@ def render_chat():
                 st.rerun()
 
         if st.button("🧹 Clear Cache", use_container_width=True, help="Clears the semantic cache so next queries run fresh through RAG/SQL"):
-            semantic_cache.reset()
-            st.toast("✅ Semantic cache cleared!", icon="🧹")
+            try:
+                api_reset_cache()
+                st.toast("✅ Semantic cache cleared!", icon="🧹")
+            except Exception as e:
+                st.error(f"Cache reset failed: {e}")
 
     # Main Chat View Header
     st.markdown(
@@ -243,34 +327,11 @@ def render_chat():
             st.markdown(msg["content"])
             if msg.get("meta"):
                 meta = msg["meta"]
-                src = meta.get("source_type", "System")
-                cache_hit = meta.get("cache_hit", False)
-
-                if cache_hit:
-                    badge_color = "#F39C12"
-                elif "SQL" in src:
-                    badge_color = "#2ECC71"
-                elif "RAG" in src:
-                    badge_color = "#3498DB"
-                elif "+" in src:
-                    badge_color = "#9B59B6"  # multi-tool: purple
-                else:
-                    badge_color = "#888888"
-
-                st.markdown(
-                    f"""
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
-                            { '⚡ Semantic Cache (<5ms)' if cache_hit else src }
-                        </span>
-                        <span style="background-color: #88888822; color: #888; border: 1px solid #88888844; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500;">
-                            Role: {st.session_state.role.upper()}
-                        </span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                _render_badges(
+                    src=meta.get("source_type", "Agent"),
+                    cache_hit=meta.get("cache_hit", False),
+                    role=st.session_state.role,
                 )
-
                 if meta.get("sql_query"):
                     with st.expander("🔍 Executed SQL Query"):
                         st.code(meta["sql_query"], language="sql")
@@ -284,40 +345,18 @@ def render_chat():
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            success, res = call_backend_query(prompt, st.session_state.role)
+            with st.spinner("Thinking..."):
+                success, res = api_chat(prompt, st.session_state.role)
             if success:
                 st.markdown(res["answer"])
-                src = res.get("source_type", "System")
-                cache_hit = res.get("cache_hit", False)
-                if cache_hit:
-                    badge_color = "#F39C12"
-                elif "SQL" in src:
-                    badge_color = "#2ECC71"
-                elif "RAG" in src:
-                    badge_color = "#3498DB"
-                elif "+" in src:
-                    badge_color = "#9B59B6"  # multi-tool: purple
-                else:
-                    badge_color = "#888888"
-
-                st.markdown(
-                    f"""
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <span style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600;">
-                            { '⚡ Semantic Cache (<5ms)' if cache_hit else src }
-                        </span>
-                        <span style="background-color: #88888822; color: #888; border: 1px solid #88888844; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 500;">
-                            Role: {st.session_state.role.upper()}
-                        </span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                _render_badges(
+                    src=res.get("source_type", "Agent"),
+                    cache_hit=res.get("cache_hit", False),
+                    role=st.session_state.role,
                 )
-
                 if res.get("sql_query"):
                     with st.expander("🔍 Executed SQL Query"):
                         st.code(res["sql_query"], language="sql")
-
                 st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
             else:
                 st.error(f"Error: {res}")
@@ -326,12 +365,10 @@ def render_chat():
 
 # ── 3. ADMIN CONTROL PANEL ───────────────────────────────────────────────────
 def render_admin():
-    from src.admin import list_indexed_docs, delete_doc, ingest_uploaded_pdf
-
     # Sidebar
     with st.sidebar:
-        st.markdown(f"### ⚙️ Admin Control Panel")
-        st.caption(f"**Security Context:** `ADMIN`")
+        st.markdown("### ⚙️ Admin Control Panel")
+        st.caption("**Security Context:** `ADMIN`")
         st.info("**Permissions:** Full administrative control over Qdrant Vector DB knowledge base documents.")
 
         st.divider()
@@ -347,8 +384,11 @@ def render_admin():
                 st.rerun()
 
         if st.button("🧹 Clear Cache", use_container_width=True, help="Clears semantic cache"):
-            semantic_cache.reset()
-            st.toast("✅ Semantic cache cleared!", icon="🧹")
+            try:
+                api_reset_cache()
+                st.toast("✅ Semantic cache cleared!", icon="🧹")
+            except Exception as e:
+                st.error(f"Cache reset failed: {e}")
 
     # Main Header
     st.markdown("<h1 style='text-align:center'><span style='color:#00b3ff;'>⚙️ Knowledge Base Admin Console</span></h1>", unsafe_allow_html=True)
@@ -356,7 +396,12 @@ def render_admin():
     st.write("")
 
     st.subheader("📚 Currently Indexed Documents in Qdrant")
-    docs = list_indexed_docs()
+    try:
+        docs = api_list_docs()
+    except Exception as e:
+        st.error(f"Failed to load documents: {e}")
+        docs = []
+
     if not docs:
         st.info("No documents currently indexed in Qdrant Vector DB.")
     else:
@@ -376,9 +421,12 @@ def render_admin():
             st.write("")
             if st.button("🗑️ Delete Document", type="primary", use_container_width=True):
                 chosen_doc = next(d for d in docs if f"{d['source_doc']} ({d['tier'].upper()})" == doc_to_delete)
-                delete_doc(chosen_doc["source_doc"], chosen_doc["tier"])
-                st.success(f"✅ Successfully deleted `{chosen_doc['source_doc']}` from {chosen_doc['tier'].upper()} tier in Qdrant!")
-                st.rerun()
+                try:
+                    api_delete_doc(chosen_doc["source_doc"], chosen_doc["tier"])
+                    st.success(f"✅ Successfully deleted `{chosen_doc['source_doc']}` from {chosen_doc['tier'].upper()} tier!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Delete failed: {e}")
 
     st.divider()
     st.subheader("📤 Ingest New PDF Document")
@@ -392,9 +440,12 @@ def render_admin():
     if uploaded_pdf is not None:
         if st.button("📥 Ingest Document to Vector DB", type="primary", use_container_width=True):
             with st.spinner(f"Chunking, embedding and indexing into Qdrant ({target_tier.upper()} tier)..."):
-                chunk_count = ingest_uploaded_pdf(uploaded_pdf.getvalue(), uploaded_pdf.name, target_tier)
-            st.success(f"✅ Successfully indexed `{uploaded_pdf.name}` into **{target_tier.upper()}** tier ({chunk_count} chunks)!")
-            st.rerun()
+                try:
+                    result = api_ingest_doc(uploaded_pdf.getvalue(), uploaded_pdf.name, target_tier)
+                    st.success(f"✅ {result['message']}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ingest failed: {e}")
 
 
 # ── 4. MAIN ROUTER ───────────────────────────────────────────────────────────
@@ -409,3 +460,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
