@@ -31,7 +31,7 @@ PORTALS = {
             "What is the One-Offer Policy during campus placements?",
             "What are the rules for lodging a formal grade appeal?",
             "What is the course withdrawal deadline for Fall 2025?",
-            "List all students placed at Google with packages.",
+            "Which students got placed at Google, and what does the One-Offer Policy say about them?",
         ],
     },
     "faculty": {
@@ -246,9 +246,16 @@ def render_chat():
                 src = meta.get("source_type", "System")
                 cache_hit = meta.get("cache_hit", False)
 
-                badge_color = "#2ECC71" if src == "SQL Database" else "#3498DB"
                 if cache_hit:
                     badge_color = "#F39C12"
+                elif "SQL" in src:
+                    badge_color = "#2ECC71"
+                elif "RAG" in src:
+                    badge_color = "#3498DB"
+                elif "+" in src:
+                    badge_color = "#9B59B6"  # multi-tool: purple
+                else:
+                    badge_color = "#888888"
 
                 st.markdown(
                     f"""
@@ -282,9 +289,16 @@ def render_chat():
                 st.markdown(res["answer"])
                 src = res.get("source_type", "System")
                 cache_hit = res.get("cache_hit", False)
-                badge_color = "#2ECC71" if src == "SQL Database" else "#3498DB"
                 if cache_hit:
                     badge_color = "#F39C12"
+                elif "SQL" in src:
+                    badge_color = "#2ECC71"
+                elif "RAG" in src:
+                    badge_color = "#3498DB"
+                elif "+" in src:
+                    badge_color = "#9B59B6"  # multi-tool: purple
+                else:
+                    badge_color = "#888888"
 
                 st.markdown(
                     f"""

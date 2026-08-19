@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 
 from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K, JINA_API_KEY, JINA_RERANK_MODEL
+from src.prompts import DECOMPOSE_PROMPT, RAG_SYSTEM_PROMPT, RAG_HUMAN_TEMPLATE
 from src.retriever import get_retriever
 from src.cache import semantic_cache
 
@@ -19,37 +20,11 @@ llm = ChatGroq(
     max_retries=2,
 )
 
-# Query Decomposition prompt — breaks complex questions into focused sub-queries
-DECOMPOSE_TEMPLATE = """You are a query analysis assistant for a university knowledge base.
-
-Break the following question into 2 or 3 standalone, specific search queries that together cover all parts of the original question.
-- Each sub-query must be self-contained and directly searchable.
-- Output ONLY the sub-queries, one per line, with no numbering, bullets, or explanation.
-- If the question is already simple and single-part, output it unchanged as one line.
-
-Question: {question}
-
-Sub-queries:"""
-
-decompose_prompt = ChatPromptTemplate.from_template(DECOMPOSE_TEMPLATE)
-
-SYSTEM_PROMPT = """You are an authoritative University Academic & Administrative Policy Assistant.
-Analyze the retrieved context thoroughly to satisfy all constraints in the query.
-
-Output Format:
-- Provide a direct, complete, and highly specific answer addressing all parts of the question.
-- Do NOT use preamble phrases like 'Based on the context...', 'After reviewing...', or 'Here is my analysis:'.
-- Use exact numbers, policy names, course codes, and dates directly from the retrieved context.
-- If the required information is not in the context, respond with exactly: "I don't have enough information in the provided documents to answer this question." """
-
-HUMAN_TEMPLATE = """Context:
-{context}
-
-Question: {question}"""
+decompose_prompt = ChatPromptTemplate.from_template(DECOMPOSE_PROMPT)
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_PROMPT),
-    ("human", HUMAN_TEMPLATE),
+    ("system", RAG_SYSTEM_PROMPT),
+    ("human", RAG_HUMAN_TEMPLATE),
 ])
 
 
