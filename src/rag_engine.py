@@ -15,7 +15,7 @@ llm = ChatGroq(
     model=GROQ_MODEL,
     groq_api_key=GROQ_API_KEY,
     temperature=0,
-    reasoning_format="parsed",
+    reasoning_effort="none",
     max_retries=2,
 )
 
