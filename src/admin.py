@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Dict, Any
 from langchain_community.document_loaders import PyPDFLoader
 from qdrant_client import models
 
@@ -11,8 +10,8 @@ from src.cache import semantic_cache
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
-def list_indexed_docs() -> List[Dict[str, Any]]:
-    """Lists all distinct PDF documents indexed in Qdrant with chunk counts."""
+def list_indexed_docs():
+    # Return all distinct indexed PDFs with their role tiers and chunk counts
     client = get_qdrant_client()
     if not client.collection_exists(COLLECTION_NAME):
         return []
@@ -37,8 +36,8 @@ def list_indexed_docs() -> List[Dict[str, Any]]:
     return list(doc_map.values())
 
 
-def delete_doc(source_doc: str, tier: str) -> bool:
-    """Safely deletes all Qdrant chunks for a specific document without affecting others."""
+def delete_doc(source_doc, tier):
+    # 1. Delete vector points matching document name and tier
     client = get_qdrant_client()
     if not client.collection_exists(COLLECTION_NAME):
         return False
@@ -61,7 +60,7 @@ def delete_doc(source_doc: str, tier: str) -> bool:
         ),
     )
 
-    # Remove physical file if it exists
+    # 2. Remove physical PDF file if present
     file_path = DATA_DIR / tier / source_doc
     if file_path.exists():
         try:
@@ -69,19 +68,18 @@ def delete_doc(source_doc: str, tier: str) -> bool:
         except Exception:
             pass
 
-    # Reset cache so deleted document data is not served
+    # 3. Clear cache so stale answers aren't returned
     semantic_cache.reset()
     return True
 
 
-def ingest_uploaded_pdf(file_bytes: bytes, filename: str, tier: str) -> int:
-    """Saves an uploaded PDF to data/<tier>/ and indexes its chunks into Qdrant."""
+def ingest_uploaded_pdf(file_bytes, filename, tier):
     tier = tier.lower()
 
-    # 1. Delete any existing chunks and old physical file first
+    # 1. Delete any existing copy first
     delete_doc(filename, tier)
 
-    # 2. Write the new uploaded file
+    # 2. Save uploaded PDF to role tier directory
     target_dir = DATA_DIR / tier
     target_dir.mkdir(parents=True, exist_ok=True)
     target_file = target_dir / filename
@@ -89,7 +87,7 @@ def ingest_uploaded_pdf(file_bytes: bytes, filename: str, tier: str) -> int:
     with open(target_file, "wb") as f:
         f.write(file_bytes)
 
-    # 3. Load and chunk PDF
+    # 3. Load and split PDF into chunks
     loader = PyPDFLoader(str(target_file.resolve()))
     docs = loader.load()
     if not docs:
@@ -105,9 +103,9 @@ def ingest_uploaded_pdf(file_bytes: bytes, filename: str, tier: str) -> int:
         chunk.metadata["tier"] = tier
         chunk.metadata["source_doc"] = filename
 
+    # 4. Add chunks to Qdrant vector store and reset cache
     vector_store = get_vector_store()
     vector_store.add_documents(chunks)
 
-    # Reset cache so fresh data takes immediate effect
     semantic_cache.reset()
     return len(chunks)

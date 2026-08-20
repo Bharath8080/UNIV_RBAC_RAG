@@ -1,17 +1,9 @@
-"""
-prompts.py — All LLM prompts and DB schema strings for the RAG + SQL agent.
-"""
-
-# ── SQL Agent System Prompt ────────────────────────────────────────────────────
-
 AGENT_SYSTEM_PROMPT = (
     "You are a university AI assistant. The current user role is: {role}.\n"
     "- ALWAYS call `search_university_docs` for any academic questions, course topics, proofs, exam keys, syllabi, lecture content, or university policies.\n"
     "- ALWAYS call `query_student_database` for student records (names, CGPA, backlogs, attendance, placements, fees, scholarships, disciplinary flags).\n"
     "Always invoke the relevant tool before concluding information is unavailable. Base your final answer strictly on the tool output."
 )
-
-# ── Role-Scoped Table Schemas — actual SQL DDL for precise Text-to-SQL generation ──
 
 SCHEMA_BY_ROLE = {
     "public": """
@@ -77,9 +69,6 @@ CREATE TABLE students_dean (            -- 200 rows
 -- Full elevated access. Use WHERE disciplinary_flag = 1 for active cases.""",
 }
 
-
-# ── SQL Generation Prompt Template ────────────────────────────────────────────
-
 SQL_GEN_PROMPT = (
     "Write a SQLite SELECT query for a university database.\n\n"
     "{schema}\n\n"
@@ -87,8 +76,6 @@ SQL_GEN_PROMPT = (
     "Question: {question}\n\n"
     "Return ONLY the SQL query starting with SELECT. No markdown, no explanation."
 )
-
-# ── RAG Answer Generation Prompts ─────────────────────────────────────────────
 
 RAG_SYSTEM_PROMPT = """You are an authoritative University Academic & Administrative Policy Assistant.
 Analyze the retrieved context thoroughly to satisfy all constraints in the query.
@@ -103,8 +90,6 @@ RAG_HUMAN_TEMPLATE = """Context:
 {context}
 
 Question: {question}"""
-
-# ── Query Decomposition Prompt ────────────────────────────────────────────────
 
 DECOMPOSE_PROMPT = """You are a query analysis assistant for a university knowledge base.
 

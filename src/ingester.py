@@ -10,7 +10,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 KNOWN_TIERS = ("public", "faculty", "advisor", "dean")
 
 
-def get_text_splitter() -> RecursiveCharacterTextSplitter:
+def get_text_splitter():
+    # Return standard text splitter with configured chunk size and overlap
     return RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
@@ -18,26 +19,21 @@ def get_text_splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
-def determine_tier_from_path(file_path: Path) -> str:
-    """Extract tier ('public', 'faculty', 'advisor', 'dean') from parent directory name."""
-    for parent in file_path.parents:
+def determine_tier_from_path(file_path):
+    # Detect role tier from parent folder name
+    for parent in Path(file_path).parents:
         if parent.name.lower() in KNOWN_TIERS:
             return parent.name.lower()
     return "public"
 
 
-def ingest_directory(data_dir: str | Path = DATA_DIR) -> int:
-    """
-    Recursively scans the data directory for PDFs, tags each chunk with:
-    - metadata['tier']: 'public' | 'faculty' | 'advisor' | 'dean'
-    - metadata['source_doc']: filename (e.g. 'campus_policies_2025.pdf')
-    and indexes them into the Qdrant vector store.
-    """
+def ingest_directory(data_dir=DATA_DIR):
     path = Path(data_dir)
     if not path.exists():
         print(f"Data directory '{path}' does not exist.")
         return 0
 
+    # 1. Scan directory for all PDF files
     pdf_files = list(path.rglob("*.pdf"))
     if not pdf_files:
         print(f"No PDF documents found in '{path}'.")
@@ -46,6 +42,7 @@ def ingest_directory(data_dir: str | Path = DATA_DIR) -> int:
     all_chunks = []
     splitter = get_text_splitter()
 
+    # 2. Load and chunk each PDF with role tier metadata
     for pdf_path in pdf_files:
         tier = determine_tier_from_path(pdf_path)
         loader = PyPDFLoader(str(pdf_path))
@@ -71,13 +68,15 @@ def ingest_directory(data_dir: str | Path = DATA_DIR) -> int:
         print("No chunks generated.")
         return 0
 
+    # 3. Add all chunks to Qdrant vector database
     vector_store = get_vector_store()
     vector_store.add_documents(all_chunks)
     print(f"\nSuccessfully indexed {len(all_chunks)} chunks across {len(pdf_files)} documents into Qdrant.")
     return len(all_chunks)
 
 
-def ingest_file(file_path: str | Path, tier: str | None = None) -> int:
+def ingest_file(file_path, tier=None):
+    # Load a single PDF, split into chunks, and index into Qdrant
     path = Path(file_path)
     if not path.exists():
         return 0

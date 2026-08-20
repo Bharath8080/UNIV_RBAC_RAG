@@ -1,15 +1,9 @@
-"""
-benchmark.py — DeepEval RAG Evaluation with Role-Based Access Control.
-Evaluates: Faithfulness, Answer Relevancy, Contextual Precision, Contextual Recall.
-Judge: Groq SDK (openai/gpt-oss-120b) with native JSON mode.
-"""
 import json
 import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Add project root to sys.path and load environment variables
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -32,25 +26,34 @@ from src.config import GROQ_API_KEY
 from src.rag_engine import query_rag
 from src.retriever import get_retriever
 
-
 JUDGE_MODEL = "openai/gpt-oss-120b"
 
 
 class GroqEvalLLM(DeepEvalBaseLLM):
-    """DeepEval judge using the official Groq SDK with native JSON mode."""
-
-    def __init__(self, model_name: str = JUDGE_MODEL):
+    def __init__(self, model_name=JUDGE_MODEL):
         self.model_name = model_name
         self._client = Groq(api_key=GROQ_API_KEY)
         self._async_client = AsyncGroq(api_key=GROQ_API_KEY)
 
     def load_model(self):
+        """
+        Loads and returns the initialized Groq client instance.
+        Returns the active Groq client.
+        """
         return self._client
 
-    def get_model_name(self) -> str:
+    def get_model_name(self):
+        """
+        Retrieves the identifier of the configured evaluation judge LLM.
+        Returns the model name string.
+        """
         return self.model_name
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt):
+        """
+        Executes a synchronous LLM completion request in JSON mode.
+        Returns the string response from the judge model.
+        """
         res = self._client.chat.completions.create(
             model=self.model_name,
             messages=[{"role": "user", "content": prompt}],
@@ -60,7 +63,11 @@ class GroqEvalLLM(DeepEvalBaseLLM):
         )
         return res.choices[0].message.content or "{}"
 
-    async def a_generate(self, prompt: str) -> str:
+    async def a_generate(self, prompt):
+        """
+        Executes an asynchronous LLM completion request in JSON mode for fast parallel evaluation.
+        Returns the string response from the judge model.
+        """
         res = await self._async_client.chat.completions.create(
             model=self.model_name,
             messages=[{"role": "user", "content": prompt}],
@@ -71,7 +78,11 @@ class GroqEvalLLM(DeepEvalBaseLLM):
         return res.choices[0].message.content or "{}"
 
 
-def load_qa_dataset() -> list[dict]:
+def load_qa_dataset():
+    """
+    Loads benchmark question and answer test pairs from the QA.json file.
+    Returns a list of question and answer dictionaries.
+    """
     qa_path = Path(__file__).resolve().parent / "QA.json"
     if qa_path.exists():
         with open(qa_path, "r", encoding="utf-8") as f:
@@ -81,8 +92,8 @@ def load_qa_dataset() -> list[dict]:
     return []
 
 
-def check_rbac_isolation(num_questions: int | None = None, k: int = 4):
-    """Fast check verifying that unprivileged 'public' role cannot retrieve restricted documents."""
+def check_rbac_isolation(num_questions=None, k=4):
+    """Checks and prints whether unprivileged public queries are strictly blocked from restricted tiers."""
     qa_data = load_qa_dataset()
     restricted = [q for q in qa_data if q.get("required_role") in ("faculty", "advisor", "dean")]
     if num_questions is not None:
@@ -103,7 +114,8 @@ def check_rbac_isolation(num_questions: int | None = None, k: int = 4):
     print(f"\nRBAC Isolation Result: {passed}/{len(restricted)} checks passed (100% isolation enforced).\n")
 
 
-def run_benchmark(num_questions: int | None = None, k: int = 4):
+def run_benchmark(num_questions=None, k=4):
+    """Runs the full DeepEval benchmark suite measuring faithfulness, relevancy, precision, and recall."""
     qa_data = load_qa_dataset()
     if not qa_data:
         return
@@ -118,14 +130,14 @@ def run_benchmark(num_questions: int | None = None, k: int = 4):
         ContextualRecallMetric(model=judge, threshold=0.7, verbose_mode=False),
     ]
 
-    all_test_cases: list[LLMTestCase] = []
+    all_test_cases = []
 
     print(f"\n🚀 Running DeepEval evaluation on {len(eval_items)} question(s)...")
 
     for idx, item in enumerate(eval_items, 1):
         question = item["question"]
         expected = item.get("expected_output", "")
-        role     = item.get("required_role", "public")
+        role = item.get("required_role", "public")
 
         res = query_rag(question=question, role=role, k=k)
         print(f"[{idx}/{len(eval_items)}] [{role.upper()}] Q: {question[:65]}...")
@@ -151,9 +163,5 @@ def run_benchmark(num_questions: int | None = None, k: int = 4):
 
 if __name__ == "__main__":
     count = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else None
-    
-    # 1. Fast metadata filter RBAC verification (respects count)
     check_rbac_isolation(num_questions=count)
-    
-    # 2. Run DeepEval evaluation on specified questions
     run_benchmark(num_questions=count)

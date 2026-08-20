@@ -1,11 +1,5 @@
-"""
-graph_router.py — LangGraph ReAct agent with RBAC-scoped RAG + SQL tools.
-"""
-from __future__ import annotations
-
 import re
 import sqlite3
-from typing import Any
 
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.tools import tool
@@ -19,11 +13,7 @@ from src.db import DB_PATH, ROLE_TABLES
 from src.prompts import AGENT_SYSTEM_PROMPT, SCHEMA_BY_ROLE, SQL_GEN_PROMPT
 from src.rag_engine import query_rag
 
-
 _WRITE_OPS = re.compile(r"\b(insert|update|delete|drop|alter|create|replace|attach|pragma)\b", re.IGNORECASE)
-
-
-# ── LLM ───────────────────────────────────────────────────────────────────────
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -33,17 +23,13 @@ llm = ChatGroq(
     max_retries=2,
 )
 
-# ── Short-Term In-Memory Checkpointer (Thread Persistence) ───────────────────
-
 checkpointer = MemorySaver()
-_AGENTS: dict[str, Any] = {}
+_AGENTS = {}
 
 
-# ── Tool Factory (role-scoped closures) ────────────────────────────────────────
-
-def _make_tools(role: str) -> list:
+def _make_tools(role):
     schema = SCHEMA_BY_ROLE.get(role, SCHEMA_BY_ROLE["public"])
-    table  = ROLE_TABLES.get(role, "students_public")
+    table = ROLE_TABLES.get(role, "students_public")
 
     @tool
     def search_university_docs(query: str) -> str:
@@ -55,19 +41,17 @@ def _make_tools(role: str) -> list:
     def query_student_database(question: str) -> str:
         """Query student records: CGPA, backlogs, attendance, placements, fees, scholarships, disciplinary flags."""
 
-        # 1. Generate SQL from LLM
+        # 1. Ask LLM to generate SQL
         raw_sql = llm.invoke(SQL_GEN_PROMPT.format(schema=schema, table=table, question=question)).content
-
-        # 2. Strip markdown fences
         sql = re.sub(r"```(?:sql)?|```", "", raw_sql, flags=re.IGNORECASE).strip()
 
-        # 3. Safety check — reject any write operations
+        # 2. Block write operations for safety
         if not re.search(r"\bselect\b", sql, re.IGNORECASE):
             return "Only SELECT queries are permitted."
         if _WRITE_OPS.search(sql):
             return "Unsafe query blocked: write operations are not allowed."
 
-        # 4. Execute on read-only SQLite
+        # 3. Run read-only query on SQLite
         conn = sqlite3.connect(f"file:{DB_PATH.as_posix()}?mode=ro", uri=True)
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -83,8 +67,7 @@ def _make_tools(role: str) -> list:
     return [search_university_docs, query_student_database]
 
 
-def get_agent_for_role(role: str):
-    """Returns or creates a role-scoped ReAct agent compiled with the in-memory checkpointer."""
+def get_agent_for_role(role):
     if role not in _AGENTS:
         _AGENTS[role] = create_react_agent(
             model=llm,
@@ -95,16 +78,12 @@ def get_agent_for_role(role: str):
     return _AGENTS[role]
 
 
-# ── Orchestrator ───────────────────────────────────────────────────────────────
-
 class HybridOrchestrator:
-    """LangGraph ReAct agent with in-memory short-term memory and thread-level state."""
-
-    def invoke(self, question: str, role: str = "public", thread_id: str | None = None) -> dict[str, Any]:
+    def invoke(self, question, role="public", thread_id=None):
         role = role.lower()
         thread_id = thread_id or f"session_{role}"
 
-        # Return from semantic cache if available
+        # 1. Check cache first
         cached = semantic_cache.get(question, role)
         if cached:
             return {
@@ -118,9 +97,8 @@ class HybridOrchestrator:
                 "raw_result": None,
             }
 
-        # Get role-scoped agent with memory checkpointer
+        # 2. Run role-scoped agent with memory thread ID
         agent = get_agent_for_role(role)
-
         config = {"configurable": {"thread_id": thread_id}}
         result = agent.invoke(
             {"messages": [{"role": "user", "content": question}]},
@@ -128,7 +106,7 @@ class HybridOrchestrator:
         )
         answer = result["messages"][-1].content
 
-        # Collect every tool that was actually called during this turn
+        # 3. Collect tools used during this turn
         tools_used = []
         for msg in reversed(result["messages"]):
             if isinstance(msg, AIMessage) and msg.tool_calls:
@@ -139,13 +117,14 @@ class HybridOrchestrator:
             if hasattr(msg, "type") and msg.type == "human":
                 break
 
-        # Map tool names → human-readable source labels
-        _TOOL_LABELS = {
+        # 4. Map tools to friendly UI badges
+        tool_labels = {
             "search_university_docs": "📄 RAG (Vector Search)",
             "query_student_database": "🗄️ SQL Database",
         }
-        source_label = " + ".join(_TOOL_LABELS.get(t, t) for t in tools_used) if tools_used else "🧠 In-Memory Context"
+        source_label = " + ".join(tool_labels.get(t, t) for t in tools_used) if tools_used else "🧠 In-Memory Context"
 
+        # 5. Save answer to cache
         if answer:
             semantic_cache.set(question, role, answer)
 

@@ -1,10 +1,8 @@
 import requests
-from typing import List, Dict, Any
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 
 from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K, JINA_API_KEY, JINA_RERANK_MODEL
@@ -28,11 +26,12 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 
 
-def format_docs(docs: List[Document]) -> str:
+def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-def decompose_query(question: str) -> List[str]:
+def decompose_query(question):
+    # Ask LLM to break question into 2-3 focused search queries
     chain = decompose_prompt | llm | StrOutputParser()
     raw = chain.invoke({"question": question})
     sub_queries = [q.strip() for q in raw.strip().splitlines() if q.strip()]
@@ -41,7 +40,8 @@ def decompose_query(question: str) -> List[str]:
     return sub_queries[:3]
 
 
-def rerank_docs(question: str, docs: List[Document], top_n: int = RERANK_TOP_N) -> List[Document]:
+def rerank_docs(question, docs, top_n=RERANK_TOP_N):
+    # Score and re-rank candidate documents using Jina AI cross-encoder API
     if not docs:
         return docs
     response = requests.post(
@@ -60,7 +60,7 @@ def rerank_docs(question: str, docs: List[Document], top_n: int = RERANK_TOP_N) 
     return [docs[r["index"]] for r in results]
 
 
-def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):
+def get_rag_chain(role="public", k=RERANK_FETCH_K):
     retriever = get_retriever(role=role, k=k)
     return (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -70,25 +70,25 @@ def get_rag_chain(role: str = "public", k: int = RERANK_FETCH_K):
     )
 
 
-def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> Dict[str, Any]:
-    # Cache check
+def query_rag(question, role="public", k=RERANK_FETCH_K):
+    # 1. Check semantic cache first
     cached_answer = semantic_cache.get(question, role)
     if cached_answer is not None:
         return {
-            "question":  question,
-            "role":      role,
-            "answer":    cached_answer,
-            "docs":      [],
+            "question": question,
+            "role": role,
+            "answer": cached_answer,
+            "docs": [],
             "cache_hit": True,
         }
 
-    # Stage 1: Query Decomposition
+    # 2. Break question into sub-queries
     sub_queries = decompose_query(question)
 
-    # Stage 2: Hybrid retrieval per sub-query
+    # 3. Hybrid retrieval per sub-query
     retriever = get_retriever(role=role, k=k)
-    seen_ids: set = set()
-    all_docs: List[Document] = []
+    seen_ids = set()
+    all_docs = []
     for sub_q in sub_queries:
         for doc in retriever.invoke(sub_q):
             doc_id = doc.metadata.get("_id") or doc.page_content[:80]
@@ -96,10 +96,10 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
                 seen_ids.add(doc_id)
                 all_docs.append(doc)
 
-    # Stage 3: Jina Reranker v3.5
+    # 4. Re-rank with Jina cross-encoder
     reranked_docs = rerank_docs(question, all_docs, top_n=RERANK_TOP_N)
 
-    # Stage 4: Answer generation
+    # 5. Synthesize final answer and save to cache
     context_text = format_docs(reranked_docs)
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
@@ -107,9 +107,9 @@ def query_rag(question: str, role: str = "public", k: int = RERANK_FETCH_K) -> D
     semantic_cache.set(question, role, answer)
 
     return {
-        "question":  question,
-        "role":      role,
-        "answer":    answer,
-        "docs":      reranked_docs,
+        "question": question,
+        "role": role,
+        "answer": answer,
+        "docs": reranked_docs,
         "cache_hit": False,
     }

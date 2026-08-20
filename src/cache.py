@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from fastembed import TextEmbedding
 from qdrant_client import QdrantClient
@@ -16,51 +15,32 @@ from src.config import CACHE_ENABLED, CACHE_SIMILARITY_THRESHOLD, CACHE_EMBED_MO
 
 
 class SemanticCache:
-    """
-    In-memory semantic cache keyed by (role, question embedding).
-    A query is a cache hit when cosine similarity ≥ threshold.
-    """
-
-    def __init__(
-        self,
-        threshold: float = CACHE_SIMILARITY_THRESHOLD,
-        enabled: bool = CACHE_ENABLED,
-    ):
+    def __init__(self, threshold=CACHE_SIMILARITY_THRESHOLD, enabled=CACHE_ENABLED):
         self.threshold = threshold
-        self.enabled   = enabled
-        self._hits     = 0
-        self._misses   = 0
+        self.enabled = enabled
+        self._hits = 0
+        self._misses = 0
 
-        self._encoder  = TextEmbedding(model_name=CACHE_EMBED_MODEL)
-        self._client   = QdrantClient(":memory:")          # isolated from ./qdrant_db
-        self._col      = "semantic_cache"
+        self._encoder = TextEmbedding(model_name=CACHE_EMBED_MODEL)
+        self._client = QdrantClient(":memory:")
+        self._col = "semantic_cache"
 
         self._client.create_collection(
             collection_name=self._col,
             vectors_config=VectorParams(size=CACHE_EMBED_DIM, distance=Distance.COSINE),
         )
 
-    # ------------------------------------------------------------------ #
-    #  Internal helpers                                                    #
-    # ------------------------------------------------------------------ #
-
-    def _embed(self, text: str) -> list[float]:
+    def _embed(self, text):
+        # Convert text into embedding vector
         return list(self._encoder.embed(text))[0].tolist()
 
-    # ------------------------------------------------------------------ #
-    #  Public API                                                          #
-    # ------------------------------------------------------------------ #
-
-    def get(self, question: str, role: str) -> Optional[str]:
-        """
-        Returns the cached answer if a semantically similar question exists
-        for the same role, otherwise returns None (cache miss).
-        """
+    def get(self, question, role):
+        # Search in-memory Qdrant for similar question matching role & threshold
         if not self.enabled:
             self._misses += 1
             return None
 
-        vector  = self._embed(question)
+        vector = self._embed(question)
         response = self._client.query_points(
             collection_name=self._col,
             query=vector,
@@ -79,8 +59,8 @@ class SemanticCache:
         self._misses += 1
         return None
 
-    def set(self, question: str, role: str, answer: str) -> None:
-        """Stores a new question–answer pair in the cache."""
+    def set(self, question, role, answer):
+        # Store question-answer pair into in-memory collection
         if not self.enabled:
             return
 
@@ -96,26 +76,25 @@ class SemanticCache:
             ],
         )
 
-    def reset(self) -> None:
-        """Clears all cache entries and resets hit/miss counters."""
+    def reset(self):
+        # Clear all cache points and reset counters
         self._client.delete_collection(self._col)
         self._client.create_collection(
             collection_name=self._col,
             vectors_config=VectorParams(size=CACHE_EMBED_DIM, distance=Distance.COSINE),
         )
-        self._hits   = 0
+        self._hits = 0
         self._misses = 0
 
-    def stats(self) -> dict:
-        """Returns hit/miss counters and hit rate."""
+    def stats(self):
+        # Calculate usage numbers and hit rate percentage
         total = self._hits + self._misses
         return {
-            "hits":     self._hits,
-            "misses":   self._misses,
-            "total":    total,
+            "hits": self._hits,
+            "misses": self._misses,
+            "total": total,
             "hit_rate": f"{(self._hits / total * 100):.1f}%" if total > 0 else "0.0%",
         }
 
 
-# Module-level singleton — shared across the entire process
 semantic_cache = SemanticCache()

@@ -1,23 +1,4 @@
-"""
-main.py — FastAPI backend for University Multi-Tenant RAG Intelligence System.
-
-Routes:
-    GET    /health             — Liveness check
-    POST   /api/chat           — Main hybrid RAG + SQL query endpoint
-    GET    /api/admin/docs     — List all indexed Qdrant documents
-    DELETE /api/admin/docs     — Delete a document from Qdrant
-    POST   /api/admin/docs     — Ingest a new PDF into Qdrant
-    POST   /api/cache/reset    — Flush the in-memory semantic cache
-
-Run:
-    uv run python main.py
-    or: uv run uvicorn main:app --reload --port 8000
-"""
-
-from __future__ import annotations
-
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -29,16 +10,12 @@ from src.db import init_db
 from src.graph_router import orchestrator
 
 
-# ── Lifespan — runs once on server startup ────────────────────────────────────
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize the SQLite role-partitioned database tables on startup."""
+    """Initializes the database tables on startup and cleans up on shutdown."""
     init_db()
     yield
 
-
-# ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="University Multi-Tenant Intelligence API",
@@ -61,42 +38,40 @@ app.add_middleware(
 )
 
 
-# ── Pydantic Schemas ──────────────────────────────────────────────────────────
-
 class ChatRequest(BaseModel):
-    question:  str           = Field(..., min_length=1, description="User's natural language question")
-    role:      str           = Field(..., description="RBAC role: public | faculty | advisor | dean")
-    thread_id: Optional[str] = Field(None, description="Unique conversation thread ID for short-term memory")
+    question: str = Field(..., min_length=1, description="User question")
+    role: str = Field(..., description="RBAC role: public | faculty | advisor | dean")
+    thread_id: str | None = Field(None, description="Conversation thread ID")
 
 
 class ChatResponse(BaseModel):
-    answer:      str
-    role:        str
-    thread_id:   Optional[str] = None
+    answer: str
+    role: str
+    thread_id: str | None = None
     source_type: str
-    tools_used:  list[str]
-    cache_hit:   bool
-    sql_query:   Optional[str] = None
-    raw_result:  Optional[str] = None
+    tools_used: list[str]
+    cache_hit: bool
+    sql_query: str | None = None
+    raw_result: str | None = None
 
 
 class DocEntry(BaseModel):
     source_doc: str
-    tier:       str
-    chunks:     int
+    tier: str
+    chunks: int
 
 
 class IngestResponse(BaseModel):
-    filename:    str
-    tier:        str
+    filename: str
+    tier: str
     chunk_count: int
-    message:     str
+    message: str
 
 
 class DeleteResponse(BaseModel):
     source_doc: str
-    tier:       str
-    message:    str
+    tier: str
+    message: str
 
 
 class CacheResetResponse(BaseModel):
@@ -104,34 +79,29 @@ class CacheResetResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status:  str
+    status: str
     version: str
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 _VALID_ROLES = {"public", "faculty", "advisor", "dean"}
 _VALID_TIERS = {"public", "faculty", "advisor", "dean"}
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
-
 @app.get("/", response_model=HealthResponse, tags=["System"])
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
-    """Liveness probe — confirms the API server is up and DB is initialized."""
+    """
+    Checks if the API server and database connection are active and healthy.
+    Returns a status confirmation object with the API version.
+    """
     return HealthResponse(status="ok", version=app.version)
 
 
 @app.post("/api/chat", response_model=ChatResponse, tags=["Chat"])
 async def chat(req: ChatRequest):
     """
-    Main query endpoint.
-
-    Routes the question through:
-    - Semantic cache (if a near-match exists, returns in <5ms)
-    - LangGraph ReAct agent with MemorySaver thread checkpointing
-      -> calls search_university_docs (RAG) and/or query_student_database (SQL)
+    Processes a user question through semantic caching, LangGraph agent routing, and memory.
+    Returns a structured chat response containing the answer, role, and source badges.
     """
     if req.role.lower() not in _VALID_ROLES:
         raise HTTPException(
@@ -162,7 +132,10 @@ async def chat(req: ChatRequest):
 
 @app.get("/api/admin/docs", response_model=list[DocEntry], tags=["Admin"])
 async def list_docs():
-    """List all PDF documents currently indexed in the Qdrant vector store."""
+    """
+    Retrieves all indexed PDF documents and their chunk counts from the vector store.
+    Returns a list of document entries.
+    """
     from src.admin import list_indexed_docs
     try:
         return list_indexed_docs()
@@ -172,10 +145,13 @@ async def list_docs():
 
 @app.delete("/api/admin/docs", response_model=DeleteResponse, tags=["Admin"])
 async def delete_document(
-    source_doc: str = Query(..., description="Exact document filename to delete"),
-    tier: str       = Query(..., description="RBAC tier: public | faculty | advisor | dean"),
+    source_doc=Query(..., description="Document filename"),
+    tier=Query(..., description="RBAC tier"),
 ):
-    """Delete a specific document from the Qdrant vector store by filename and tier."""
+    """
+    Deletes all vector embeddings for a specific document name within a role tier.
+    Returns a confirmation message with the deleted document details.
+    """
     from src.admin import delete_doc
     try:
         delete_doc(source_doc, tier)
@@ -191,11 +167,11 @@ async def delete_document(
 @app.post("/api/admin/docs", response_model=IngestResponse, tags=["Admin"])
 async def ingest_document(
     file: UploadFile = File(..., description="PDF file to ingest"),
-    tier: str        = Form(..., description="RBAC tier: public | faculty | advisor | dean"),
+    tier=Form(..., description="RBAC tier"),
 ):
     """
-    Upload and ingest a PDF into the Qdrant vector store for the given RBAC tier.
-    The PDF is split into chunks, embedded, and stored with role-scoped metadata.
+    Uploads and processes a new PDF document into chunks and vector embeddings.
+    Returns a response object with the uploaded filename and indexed chunk count.
     """
     if tier.lower() not in _VALID_TIERS:
         raise HTTPException(
@@ -222,14 +198,15 @@ async def ingest_document(
 
 @app.post("/api/cache/reset", response_model=CacheResetResponse, tags=["System"])
 async def reset_cache():
-    """Flush the in-memory semantic cache. Next queries re-run through the full agent."""
+    """
+    Flushes all entries stored inside the in-memory semantic cache.
+    Returns a confirmation message indicating the cache was cleared.
+    """
     semantic_cache.reset()
     return CacheResetResponse(message="Semantic cache cleared successfully.")
 
-# ── Entry Point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import os
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
-

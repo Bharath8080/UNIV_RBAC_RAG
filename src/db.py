@@ -41,12 +41,13 @@ ROLE_SCHEMA = {
 }
 
 
-def init_db() -> None:
-    """Initializes SQLite database with role-partitioned tables."""
+def init_db():
+    # Generate CSV dataset if missing
     if not CSV_PATH.exists():
         from scripts.gen_students_csv import main as gen_csv
         gen_csv()
 
+    # Create role-partitioned SQLite tables from CSV
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
@@ -68,4 +69,3 @@ def init_db() -> None:
 
 if __name__ == "__main__":
     init_db()
-    print("✅ Initialized role-scoped SQLite database.")

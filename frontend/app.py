@@ -1,12 +1,8 @@
-"""
-app.py — Streamlit frontend for University Multi-Tenant RAG Intelligence System.
-
-Communicates with the FastAPI backend (main.py) via HTTP.
-Set BACKEND_URL env var to point to the API server (default: http://localhost:8000).
-"""
-
 import os
 import uuid
+import warnings
+
+warnings.filterwarnings("ignore")
 
 import requests
 import streamlit as st
@@ -14,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://univ-rbac-rag-e3f288e6.fastapicloud.dev")
 
 st.set_page_config(
     page_title="University Multi-Tenant Intelligence",
@@ -23,10 +19,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Generic University Role Portals ───────────────────────────────────────────
 PORTALS = {
     "student": {
-        "password": os.getenv("STUDENT_PASSWORD", "student123"),
+        "password": os.getenv("STUDENT_PASSWORD"),
         "role": "public",
         "name": "Student Portal",
         "icon": "🎓",
@@ -40,7 +35,7 @@ PORTALS = {
         ],
     },
     "faculty": {
-        "password": os.getenv("FACULTY_PASSWORD", "faculty123"),
+        "password": os.getenv("FACULTY_PASSWORD"),
         "role": "faculty",
         "name": "Faculty Portal",
         "icon": "👨‍🏫",
@@ -54,7 +49,7 @@ PORTALS = {
         ],
     },
     "advisor": {
-        "password": os.getenv("ADVISOR_PASSWORD", "advisor123"),
+        "password": os.getenv("ADVISOR_PASSWORD"),
         "role": "advisor",
         "name": "Academic Advisor Portal",
         "icon": "🧭",
@@ -68,7 +63,7 @@ PORTALS = {
         ],
     },
     "dean": {
-        "password": os.getenv("DEAN_PASSWORD", "dean123"),
+        "password": os.getenv("DEAN_PASSWORD"),
         "role": "dean",
         "name": "Dean / Executive Portal",
         "icon": "🏛️",
@@ -82,7 +77,7 @@ PORTALS = {
         ],
     },
     "admin": {
-        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
+        "password": os.getenv("ADMIN_PASSWORD"),
         "role": "admin",
         "name": "Admin Portal",
         "icon": "⚙️",
@@ -91,7 +86,6 @@ PORTALS = {
     },
 }
 
-# ── Session State Management ──────────────────────────────────────────────────
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "portal_key" not in st.session_state:
@@ -108,72 +102,68 @@ if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
 
 
-# ── API Helper Functions ──────────────────────────────────────────────────────
-
-def api_chat(question: str, role: str, thread_id: str | None = None) -> tuple[bool, dict | str]:
-    """Send a question to the FastAPI backend and return the response."""
+def api_chat(question, role, thread_id=None):
+    # Send user question with role and conversation ID to FastAPI backend
     try:
         payload = {
             "question": question,
             "role": role,
             "thread_id": thread_id or st.session_state.get("thread_id", str(uuid.uuid4())),
         }
-        resp = requests.post(
+        response = requests.post(
             f"{BACKEND_URL}/api/chat",
             json=payload,
             timeout=120,
         )
-        resp.raise_for_status()
-        return True, resp.json()
+        response.raise_for_status()
+        return True, response.json()
     except requests.exceptions.ConnectionError:
         return False, f"Cannot connect to backend at {BACKEND_URL}. Is FastAPI running?"
     except requests.exceptions.Timeout:
         return False, "Request timed out. The agent is taking too long."
-    except requests.exceptions.HTTPError as e:
-        detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+    except requests.exceptions.HTTPError as err:
+        detail = err.response.json().get("detail", str(err)) if err.response else str(err)
         return False, f"API error: {detail}"
-    except Exception as e:
-        return False, str(e)
+    except Exception as err:
+        return False, str(err)
 
 
-def api_list_docs() -> list[dict]:
-    """Fetch the list of indexed documents from the FastAPI backend."""
-    resp = requests.get(f"{BACKEND_URL}/api/admin/docs", timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+def api_list_docs():
+    # Fetch list of indexed documents from backend
+    response = requests.get(f"{BACKEND_URL}/api/admin/docs", timeout=30)
+    response.raise_for_status()
+    return response.json()
 
 
-def api_delete_doc(source_doc: str, tier: str) -> None:
-    """Delete a document from the Qdrant vector store via FastAPI."""
-    resp = requests.delete(
+def api_delete_doc(source_doc, tier):
+    # Delete a document and its vectors from Qdrant via backend
+    response = requests.delete(
         f"{BACKEND_URL}/api/admin/docs",
         params={"source_doc": source_doc, "tier": tier},
         timeout=30,
     )
-    resp.raise_for_status()
+    response.raise_for_status()
 
 
-def api_ingest_doc(pdf_bytes: bytes, filename: str, tier: str) -> dict:
-    """Upload and ingest a PDF into Qdrant via FastAPI."""
-    resp = requests.post(
+def api_ingest_doc(pdf_bytes, filename, tier):
+    # Upload and ingest a new PDF into Qdrant via backend
+    response = requests.post(
         f"{BACKEND_URL}/api/admin/docs",
         files={"file": (filename, pdf_bytes, "application/pdf")},
         data={"tier": tier},
         timeout=120,
     )
-    resp.raise_for_status()
-    return resp.json()
+    response.raise_for_status()
+    return response.json()
 
 
-def api_reset_cache() -> None:
-    """Flush the semantic cache via FastAPI."""
-    resp = requests.post(f"{BACKEND_URL}/api/cache/reset", timeout=10)
-    resp.raise_for_status()
+def api_reset_cache():
+    # Flush semantic cache via backend
+    response = requests.post(f"{BACKEND_URL}/api/cache/reset", timeout=10)
+    response.raise_for_status()
 
 
-# ── Badge Renderer ────────────────────────────────────────────────────────────
-
-def _render_badges(src: str, cache_hit: bool, role: str) -> None:
+def _render_badges(src, cache_hit, role):
     if cache_hit:
         badge_color = "#F39C12"
     elif "In-Memory" in src or "Memory" in src:
@@ -183,7 +173,7 @@ def _render_badges(src: str, cache_hit: bool, role: str) -> None:
     elif "RAG" in src:
         badge_color = "#3498DB"
     elif "+" in src:
-        badge_color = "#9B59B6"   # multi-tool: purple
+        badge_color = "#9B59B6"
     else:
         badge_color = "#888888"
 
@@ -202,9 +192,8 @@ def _render_badges(src: str, cache_hit: bool, role: str) -> None:
     )
 
 
-# ── Dialog for Login Alerts ───────────────────────────────────────────────────
 @st.dialog("Authentication Alert")
-def show_login_alert(message: str, is_error: bool = True):
+def show_login_alert(message, is_error=True):
     if is_error:
         st.error(message)
     else:
@@ -213,7 +202,6 @@ def show_login_alert(message: str, is_error: bool = True):
         st.rerun()
 
 
-# ── 1. LOGIN SCREEN ───────────────────────────────────────────────────────────
 def render_login():
     _, col, _ = st.columns([1, 1.8, 1])
 
@@ -256,7 +244,7 @@ def render_login():
             else:
                 show_login_alert("Invalid portal password. Please check the credentials directory below.")
 
-        # Quick 1-Click Demo Logins
+        # Quick 1-click demo logins
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### ⚡ Quick 1-Click Demo Logins")
         demo_cols = st.columns(5)
@@ -274,19 +262,18 @@ def render_login():
 
         with st.expander("ℹ️ Role-Based Credentials Directory"):
             st.table([
-                {"Role Portal": "Student Portal",  "Role Code": "public",  "Default Password": "student123",  "Access Level": "Public docs, catalog, placement stats"},
-                {"Role Portal": "Faculty Portal",  "Role Code": "faculty", "Default Password": "faculty123",  "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
-                {"Role Portal": "Advisor Portal",  "Role Code": "advisor", "Default Password": "advisor123",  "Access Level": "Tuition fees, attendance audits & scholarships"},
-                {"Role Portal": "Dean Portal",     "Role Code": "dean",    "Default Password": "dean123",     "Access Level": "Full database, disciplinary logs & tenure governance"},
-                {"Role Portal": "Admin Portal",    "Role Code": "admin",   "Default Password": "admin123",    "Access Level": "Vector DB document ingestion/deletion by RBAC tier"},
+                {"Role Portal": "Student Portal", "Role Code": "public", "Default Password": "student123", "Access Level": "Public docs, catalog, placement stats"},
+                {"Role Portal": "Faculty Portal", "Role Code": "faculty", "Default Password": "faculty123", "Access Level": "Student scores, CGPA, backlogs & lesson plans"},
+                {"Role Portal": "Advisor Portal", "Role Code": "advisor", "Default Password": "advisor123", "Access Level": "Tuition fees, attendance audits & scholarships"},
+                {"Role Portal": "Dean Portal", "Role Code": "dean", "Default Password": "dean123", "Access Level": "Full database, disciplinary logs & tenure governance"},
+                {"Role Portal": "Admin Portal", "Role Code": "admin", "Default Password": "admin123", "Access Level": "Vector DB document ingestion/deletion by RBAC tier"},
             ])
 
 
-# ── 2. CHAT INTERFACE ─────────────────────────────────────────────────────────
 def render_chat():
     portal_info = PORTALS.get(st.session_state.portal_key, PORTALS["student"])
 
-    # Sidebar
+    # Sidebar controls
     with st.sidebar:
         st.markdown(f"### {st.session_state.icon} {st.session_state.portal_name}")
         st.caption(f"**Security Context:** `{st.session_state.role.upper()}`")
@@ -318,14 +305,14 @@ def render_chat():
                 st.session_state.thread_id = str(uuid.uuid4())
                 st.rerun()
 
-        if st.button("🧹 Clear Cache", use_container_width=True, help="Clears the semantic cache so next queries run fresh through RAG/SQL"):
+        if st.button("🧹 Clear Cache", use_container_width=True, help="Clears the semantic cache"):
             try:
                 api_reset_cache()
                 st.toast("✅ Semantic cache cleared!", icon="🧹")
-            except Exception as e:
-                st.error(f"Cache reset failed: {e}")
+            except Exception as err:
+                st.error(f"Cache reset failed: {err}")
 
-    # Main Chat View Header
+    # Chat header
     st.markdown(
         f"""
         <h1 style='text-align:center'>
@@ -335,7 +322,7 @@ def render_chat():
         unsafe_allow_html=True,
     )
 
-    # Display Chat History
+    # Render message history
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -352,7 +339,7 @@ def render_chat():
                         if meta.get("raw_result") is not None:
                             st.caption(f"Raw Database Output: `{meta['raw_result']}`")
 
-    # Chat Input
+    # Chat prompt input
     if prompt := st.chat_input("Ask about student analytics, attendance, fees, or university policies..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -377,9 +364,7 @@ def render_chat():
                 st.session_state.messages.append({"role": "assistant", "content": f"⚠️ {res}", "meta": None})
 
 
-# ── 3. ADMIN CONTROL PANEL ───────────────────────────────────────────────────
 def render_admin():
-    # Sidebar
     with st.sidebar:
         st.markdown("### ⚙️ Admin Control Panel")
         st.caption("**Security Context:** `ADMIN`")
@@ -401,10 +386,9 @@ def render_admin():
             try:
                 api_reset_cache()
                 st.toast("✅ Semantic cache cleared!", icon="🧹")
-            except Exception as e:
-                st.error(f"Cache reset failed: {e}")
+            except Exception as err:
+                st.error(f"Cache reset failed: {err}")
 
-    # Main Header
     st.markdown("<h1 style='text-align:center'><span style='color:#00b3ff;'>⚙️ Knowledge Base Admin Console</span></h1>", unsafe_allow_html=True)
     st.caption("Manage Qdrant Vector DB embeddings, view indexed policies by tier, and safely ingest or delete documents.")
     st.write("")
@@ -412,8 +396,8 @@ def render_admin():
     st.subheader("📚 Currently Indexed Documents in Qdrant")
     try:
         docs = api_list_docs()
-    except Exception as e:
-        st.error(f"Failed to load documents: {e}")
+    except Exception as err:
+        st.error(f"Failed to load documents: {err}")
         docs = []
 
     if not docs:
@@ -439,8 +423,8 @@ def render_admin():
                     api_delete_doc(chosen_doc["source_doc"], chosen_doc["tier"])
                     st.success(f"✅ Successfully deleted `{chosen_doc['source_doc']}` from {chosen_doc['tier'].upper()} tier!")
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Delete failed: {e}")
+                except Exception as err:
+                    st.error(f"Delete failed: {err}")
 
     st.divider()
     st.subheader("📤 Ingest New PDF Document")
@@ -458,11 +442,10 @@ def render_admin():
                     result = api_ingest_doc(uploaded_pdf.getvalue(), uploaded_pdf.name, target_tier)
                     st.success(f"✅ {result['message']}")
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Ingest failed: {e}")
+                except Exception as err:
+                    st.error(f"Ingest failed: {err}")
 
 
-# ── 4. MAIN ROUTER ───────────────────────────────────────────────────────────
 def main():
     if not st.session_state.logged_in:
         render_login()
@@ -474,5 +457,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
