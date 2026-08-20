@@ -64,13 +64,15 @@ app.add_middleware(
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    question: str = Field(..., min_length=1, description="User's natural language question")
-    role: str     = Field(..., description="RBAC role: public | faculty | advisor | dean")
+    question:  str           = Field(..., min_length=1, description="User's natural language question")
+    role:      str           = Field(..., description="RBAC role: public | faculty | advisor | dean")
+    thread_id: Optional[str] = Field(None, description="Unique conversation thread ID for short-term memory")
 
 
 class ChatResponse(BaseModel):
     answer:      str
     role:        str
+    thread_id:   Optional[str] = None
     source_type: str
     tools_used:  list[str]
     cache_hit:   bool
@@ -127,8 +129,8 @@ async def chat(req: ChatRequest):
 
     Routes the question through:
     - Semantic cache (if a near-match exists, returns in <5ms)
-    - LangGraph ReAct agent -> calls search_university_docs (RAG)
-      and/or query_student_database (SQL) based on question intent
+    - LangGraph ReAct agent with MemorySaver thread checkpointing
+      -> calls search_university_docs (RAG) and/or query_student_database (SQL)
     """
     if req.role.lower() not in _VALID_ROLES:
         raise HTTPException(
@@ -137,13 +139,18 @@ async def chat(req: ChatRequest):
         )
 
     try:
-        result = orchestrator.invoke(question=req.question, role=req.role.lower())
+        result = orchestrator.invoke(
+            question=req.question,
+            role=req.role.lower(),
+            thread_id=req.thread_id,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}") from exc
 
     return ChatResponse(
         answer=result.get("answer", ""),
         role=result.get("role", req.role),
+        thread_id=result.get("thread_id", req.thread_id),
         source_type=result.get("source_type", "Agent"),
         tools_used=result.get("tools_used", []),
         cache_hit=result.get("cache_hit", False),

@@ -6,6 +6,7 @@ Set BACKEND_URL env var to point to the API server (default: http://localhost:80
 """
 
 import os
+import uuid
 
 import requests
 import streamlit as st
@@ -103,16 +104,23 @@ if "icon" not in st.session_state:
     st.session_state.icon = "🎓"
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = str(uuid.uuid4())
 
 
 # ── API Helper Functions ──────────────────────────────────────────────────────
 
-def api_chat(question: str, role: str) -> tuple[bool, dict | str]:
+def api_chat(question: str, role: str, thread_id: str | None = None) -> tuple[bool, dict | str]:
     """Send a question to the FastAPI backend and return the response."""
     try:
+        payload = {
+            "question": question,
+            "role": role,
+            "thread_id": thread_id or st.session_state.get("thread_id", str(uuid.uuid4())),
+        }
         resp = requests.post(
             f"{BACKEND_URL}/api/chat",
-            json={"question": question, "role": role},
+            json=payload,
             timeout=120,
         )
         resp.raise_for_status()
@@ -168,6 +176,8 @@ def api_reset_cache() -> None:
 def _render_badges(src: str, cache_hit: bool, role: str) -> None:
     if cache_hit:
         badge_color = "#F39C12"
+    elif "In-Memory" in src or "Memory" in src:
+        badge_color = "#E056FD"
     elif "SQL" in src:
         badge_color = "#2ECC71"
     elif "RAG" in src:
@@ -241,6 +251,7 @@ def render_login():
                 st.session_state.portal_name = portal_info["name"]
                 st.session_state.icon = portal_info["icon"]
                 st.session_state.messages = []
+                st.session_state.thread_id = str(uuid.uuid4())
                 st.rerun()
             else:
                 show_login_alert("Invalid portal password. Please check the credentials directory below.")
@@ -258,6 +269,7 @@ def render_login():
                     st.session_state.portal_name = info["name"]
                     st.session_state.icon = info["icon"]
                     st.session_state.messages = []
+                    st.session_state.thread_id = str(uuid.uuid4())
                     st.rerun()
 
         with st.expander("ℹ️ Role-Based Credentials Directory"):
@@ -285,7 +297,7 @@ def render_chat():
         for q in portal_info.get("examples", []):
             if st.button(q, key=f"btn_{q[:20]}", use_container_width=True):
                 st.session_state.messages.append({"role": "user", "content": q})
-                success, res = api_chat(q, st.session_state.role)
+                success, res = api_chat(q, st.session_state.role, st.session_state.thread_id)
                 if success:
                     st.session_state.messages.append({"role": "assistant", "content": res["answer"], "meta": res})
                 else:
@@ -297,11 +309,13 @@ def render_chat():
         with col_clear:
             if st.button("🗑️ Clear", use_container_width=True):
                 st.session_state.messages = []
+                st.session_state.thread_id = str(uuid.uuid4())
                 st.rerun()
         with col_logout:
             if st.button("🚪 Logout", type="primary", use_container_width=True):
                 st.session_state.logged_in = False
                 st.session_state.messages = []
+                st.session_state.thread_id = str(uuid.uuid4())
                 st.rerun()
 
         if st.button("🧹 Clear Cache", use_container_width=True, help="Clears the semantic cache so next queries run fresh through RAG/SQL"):
@@ -346,7 +360,7 @@ def render_chat():
 
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                success, res = api_chat(prompt, st.session_state.role)
+                success, res = api_chat(prompt, st.session_state.role, st.session_state.thread_id)
             if success:
                 st.markdown(res["answer"])
                 _render_badges(
