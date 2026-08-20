@@ -3,9 +3,18 @@ benchmark.py — DeepEval RAG Evaluation with Role-Based Access Control.
 Evaluates: Faithfulness, Answer Relevancy, Contextual Precision, Contextual Recall.
 Judge: Groq SDK (openai/gpt-oss-120b) with native JSON mode.
 """
-from __future__ import annotations
 import json
+import os
+import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Add project root to sys.path and load environment variables
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+load_dotenv(ROOT_DIR / ".env")
 
 from groq import Groq, AsyncGroq
 from deepeval import evaluate
@@ -21,6 +30,7 @@ from deepeval.test_case import LLMTestCase
 
 from src.config import GROQ_API_KEY
 from src.rag_engine import query_rag
+from src.retriever import get_retriever
 
 
 JUDGE_MODEL = "openai/gpt-oss-120b"
@@ -71,16 +81,19 @@ def load_qa_dataset() -> list[dict]:
     return []
 
 
-def check_rbac_isolation(k: int = 4):
-    """Verifies that an unprivileged 'public' role cannot retrieve any restricted documents."""
+def check_rbac_isolation(num_questions: int | None = None, k: int = 4):
+    """Fast check verifying that unprivileged 'public' role cannot retrieve restricted documents."""
     qa_data = load_qa_dataset()
     restricted = [q for q in qa_data if q.get("required_role") in ("faculty", "advisor", "dean")]
+    if num_questions is not None:
+        restricted = restricted[:num_questions]
 
-    print(f"\n🔒 Running Full RBAC Isolation Check on all {len(restricted)} restricted questions...")
+    print(f"\n🔒 Running RBAC Isolation Check on {len(restricted)} restricted questions...")
+    retriever = get_retriever(role="public", k=k)
     passed = 0
     for idx, item in enumerate(restricted, 1):
-        res = query_rag(question=item["question"], role="public", k=k)
-        retrieved_tiers = {doc.metadata.get("tier") for doc in res["docs"]}
+        docs = retriever.invoke(item["question"])
+        retrieved_tiers = {doc.metadata.get("tier") for doc in docs}
         has_leak = bool(retrieved_tiers - {"public"})
         if not has_leak:
             passed += 1
@@ -107,7 +120,7 @@ def run_benchmark(num_questions: int | None = None, k: int = 4):
 
     all_test_cases: list[LLMTestCase] = []
 
-    print(f"\n🚀 Running DeepEval evaluation on all {len(eval_items)} question(s)...")
+    print(f"\n🚀 Running DeepEval evaluation on {len(eval_items)} question(s)...")
 
     for idx, item in enumerate(eval_items, 1):
         question = item["question"]
@@ -137,11 +150,10 @@ def run_benchmark(num_questions: int | None = None, k: int = 4):
 
 
 if __name__ == "__main__":
-    import sys
     count = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else None
     
-    # 1. First verify multi-tenant RBAC boundary isolation on all restricted questions
-    check_rbac_isolation()
+    # 1. Fast metadata filter RBAC verification (respects count)
+    check_rbac_isolation(num_questions=count)
     
-    # 2. Then run full DeepEval evaluation on all 50 questions
+    # 2. Run DeepEval evaluation on specified questions
     run_benchmark(num_questions=count)

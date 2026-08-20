@@ -6,6 +6,7 @@ load_dotenv()
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 JINA_API_KEY    = os.getenv("JINA_API_KEY", "")
+HF_TOKEN        = os.getenv("HF_TOKEN", "")
 QDRANT_PATH     = os.getenv("QDRANT_PATH", "./qdrant_db")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "univ_hybrid_rag")
 
@@ -13,8 +14,8 @@ COLLECTION_NAME = os.getenv("COLLECTION_NAME", "univ_hybrid_rag")
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 EMBED_DIM   = 384
 
-# Sparse Embedding (FastEmbed - BM25 ~5MB ultra-lightweight)
-SPARSE_EMBED_MODEL = "Qdrant/bm25"
+# Sparse Embedding (FastEmbed - BM42 Attention-based ~90MB, balanced quality & speed)
+SPARSE_EMBED_MODEL = "Qdrant/bm42-all-minilm-l6-v2-attentions"
 
 # Cross-Encoder Reranker (Jina AI API)
 JINA_RERANK_MODEL = "jina-reranker-v3.5"

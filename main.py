@@ -116,6 +116,7 @@ _VALID_TIERS = {"public", "faculty", "advisor", "dean"}
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@app.get("/", response_model=HealthResponse, tags=["System"])
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
     """Liveness probe — confirms the API server is up and DB is initialized."""
