@@ -83,6 +83,10 @@ class HybridOrchestrator:
         role = role.lower()
         thread_id = thread_id or f"session_{role}"
 
+        # 0. Enforce input security guardrails before cache or agent execution
+        from src.guardrails import run_input_guardrails
+        run_input_guardrails(question)
+
         # 1. Check cache first
         cached = semantic_cache.get(question, role)
         if cached:

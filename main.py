@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from typing import Literal
+from uuid import uuid4
 
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -73,6 +74,23 @@ class IngestResponse(BaseModel):
     message: str
 
 
+class IngestAcceptedResponse(BaseModel):
+    task_id: str
+    filename: str
+    tier: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    filename: str
+    tier: str
+    status: str          # pending | done | failed
+    chunk_count: int | None = None
+    error: str | None = None
+
+
 class DeleteResponse(BaseModel):
     source_doc: str
     tier: str
@@ -91,6 +109,9 @@ class HealthResponse(BaseModel):
 _VALID_ROLES = {"public", "faculty", "advisor", "dean"}
 _VALID_TIERS = {"public", "faculty", "advisor", "dean"}
 
+# In-memory task registry: task_id -> status dict
+_tasks: dict[str, dict] = {}
+
 
 @app.get("/", response_model=HealthResponse, tags=["System"])
 @app.get("/health", response_model=HealthResponse, tags=["System"])
@@ -107,15 +128,29 @@ def chat(req: ChatRequest):
     """
     Processes a user question through semantic caching, LangGraph agent routing, and memory.
     Returns a structured chat response containing the answer, role, and source badges.
+    Guardrails: prompt injection and topic relevance enforced before any LLM call.
     """
+    from src.guardrails import GuardrailException
     try:
         result = orchestrator.invoke(
             question=req.question,
             role=req.role.lower(),
             thread_id=req.thread_id,
         )
+    except GuardrailException as exc:
+        return ChatResponse(
+            answer=f"🛡️ **[SECURITY GUARDRAIL BLOCKED]**\n\n> ⚠️ **Access Denied**: {str(exc)}",
+            role=req.role,
+            thread_id=req.thread_id,
+            source_type="🛡️ Security Guardrail",
+            tools_used=[],
+            cache_hit=False,
+            sql_query=None,
+            raw_result=None,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}") from exc
+
 
     return ChatResponse(
         answer=result.get("answer", ""),
@@ -163,14 +198,15 @@ def delete_document(
         raise HTTPException(status_code=500, detail=f"Delete failed: {exc}") from exc
 
 
-@app.post("/api/admin/docs", response_model=IngestResponse, tags=["Admin"])
+@app.post("/api/admin/docs", response_model=IngestAcceptedResponse, status_code=202, tags=["Admin"])
 def ingest_document(
     file: UploadFile = File(..., description="PDF file to ingest"),
-    tier=Form(..., description="RBAC tier"),
+    tier: str = Form(..., description="RBAC tier"),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """
-    Uploads and processes a new PDF document into chunks and vector embeddings.
-    Returns a response object with the uploaded filename and indexed chunk count.
+    Accepts a PDF upload and immediately returns HTTP 202 Accepted with a unique task_id.
+    Poll GET /api/admin/tasks/{task_id} to check if ingestion is done, failed, or still pending.
     """
     if tier.lower() not in _VALID_TIERS:
         raise HTTPException(
@@ -182,17 +218,43 @@ def ingest_document(
         raise HTTPException(status_code=422, detail="Only PDF files are accepted.")
 
     from src.admin import ingest_uploaded_pdf
-    try:
-        content = file.file.read()
-        chunk_count = ingest_uploaded_pdf(content, file.filename, tier.lower())
-        return IngestResponse(
-            filename=file.filename,
-            tier=tier.lower(),
-            chunk_count=chunk_count,
-            message=f"Indexed '{file.filename}' into {tier.upper()} tier ({chunk_count} chunks).",
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Ingest failed: {exc}") from exc
+
+    task_id = str(uuid4())
+    content = file.file.read()
+    filename = file.filename
+    tier_lower = tier.lower()
+
+    # Register task as pending before handing off to background
+    _tasks[task_id] = {"filename": filename, "tier": tier_lower, "status": "pending", "chunk_count": None, "error": None}
+
+    def _run_ingest():
+        try:
+            chunk_count = ingest_uploaded_pdf(content, filename, tier_lower)
+            _tasks[task_id].update({"status": "done", "chunk_count": chunk_count})
+        except Exception as exc:
+            _tasks[task_id].update({"status": "failed", "error": str(exc)})
+
+    background_tasks.add_task(_run_ingest)
+
+    return IngestAcceptedResponse(
+        task_id=task_id,
+        filename=filename,
+        tier=tier_lower,
+        status="pending",
+        message=f"'{filename}' queued for ingestion into {tier.upper()} tier. Poll /api/admin/tasks/{task_id} for status.",
+    )
+
+
+@app.get("/api/admin/tasks/{task_id}", response_model=TaskStatusResponse, tags=["Admin"])
+def get_task_status(task_id: str):
+    """
+    Poll the status of a background ingestion task by its task_id.
+    Status values: pending | done | failed
+    """
+    task = _tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+    return TaskStatusResponse(task_id=task_id, **task)
 
 
 @app.post("/api/cache/reset", response_model=CacheResetResponse, tags=["System"])

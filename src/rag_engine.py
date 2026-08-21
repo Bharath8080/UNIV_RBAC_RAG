@@ -9,6 +9,7 @@ from src.config import GROQ_API_KEY, GROQ_MODEL, RERANK_TOP_N, RERANK_FETCH_K, J
 from src.prompts import DECOMPOSE_PROMPT, RAG_SYSTEM_PROMPT, RAG_HUMAN_TEMPLATE
 from src.retriever import get_retriever
 from src.cache import semantic_cache
+from src.guardrails import run_input_guardrails, check_output_quality, GuardrailException  # noqa: F401
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -74,6 +75,9 @@ def get_rag_chain(role="public", k=RERANK_FETCH_K):
 
 
 def query_rag(question, role="public", k=RERANK_FETCH_K):
+    # Guardrails: injection check (regex, 0ms) + topic relevance (1 LLM call)
+    run_input_guardrails(question)
+
     # 1. Check semantic cache first
     cached_answer = semantic_cache.get(question, role)
     if cached_answer is not None:
@@ -83,6 +87,7 @@ def query_rag(question, role="public", k=RERANK_FETCH_K):
             "answer": cached_answer,
             "docs": [],
             "cache_hit": True,
+            "guardrail": {"low_confidence": False, "reason": None},
         }
 
     # 2. Break question into sub-queries
@@ -102,12 +107,15 @@ def query_rag(question, role="public", k=RERANK_FETCH_K):
     # 4. Re-rank with Jina cross-encoder
     reranked_docs = rerank_docs(question, all_docs, top_n=RERANK_TOP_N)
 
-    # 5. Synthesize final answer and save to cache
+    # 5. Synthesize final answer
     context_text = format_docs(reranked_docs)
     chain = prompt | llm | StrOutputParser()
     answer = chain.invoke({"context": context_text, "question": question})
 
-    semantic_cache.set(question, role, answer)
+    # Guardrail 3: Hallucination flag — non-blocking, only skip cache if low-confidence
+    guardrail_result = check_output_quality(answer, reranked_docs)
+    if not guardrail_result["low_confidence"]:
+        semantic_cache.set(question, role, answer)
 
     return {
         "question": question,
@@ -115,4 +123,5 @@ def query_rag(question, role="public", k=RERANK_FETCH_K):
         "answer": answer,
         "docs": reranked_docs,
         "cache_hit": False,
+        "guardrail": guardrail_result,
     }

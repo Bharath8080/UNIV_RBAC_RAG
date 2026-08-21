@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "https://univ-rbac-rag-e3f288e6.fastapicloud.dev")
+BACKEND_URL = os.getenv("BACKEND_URL")
 
 st.set_page_config(
     page_title="University Multi-Tenant Intelligence",
@@ -164,7 +164,9 @@ def api_reset_cache():
 
 
 def _render_badges(src, cache_hit, role):
-    if cache_hit:
+    if "Guardrail" in src or "Security" in src or "🛡️" in src:
+        badge_color = "#E74C3C"
+    elif cache_hit:
         badge_color = "#F39C12"
     elif "In-Memory" in src or "Memory" in src:
         badge_color = "#E056FD"
