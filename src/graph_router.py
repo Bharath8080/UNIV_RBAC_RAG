@@ -64,7 +64,17 @@ def _make_tools(role):
 
         return f"columns: {', '.join(cols)}\nrows: {rows[:30]}"
 
-    return [search_university_docs, query_student_database]
+    @tool
+    def greet_user(greeting_text: str = "") -> str:
+        """Use this tool when the user sends a greeting (e.g. 'hello', 'hi', 'hey', 'good morning', etc.), introduces themselves, or asks how the assistant can help."""
+        prompt = (
+            f"You are the University AI Assistant for the {role.upper()} portal. "
+            f"The user said: '{greeting_text or 'Hello'}'. "
+            f"Respond with a brief, warm, natural, and dynamic greeting introducing your portal role and politely offering assistance."
+        )
+        return llm.invoke(prompt).content
+
+    return [search_university_docs, query_student_database, greet_user]
 
 
 def get_agent_for_role(role):
@@ -125,8 +135,14 @@ class HybridOrchestrator:
         tool_labels = {
             "search_university_docs": "📄 RAG (Vector Search)",
             "query_student_database": "🗄️ SQL Database",
+            "greet_user": "👋 Portal Assistant",
         }
-        source_label = " + ".join(tool_labels.get(t, t) for t in tools_used) if tools_used else "🧠 In-Memory Context"
+        if tools_used:
+            source_label = " + ".join(tool_labels.get(t, t) for t in tools_used)
+        elif len(result.get("messages", [])) > 2:
+            source_label = "🧠 In-Memory Context"
+        else:
+            source_label = "💬 Portal Assistant"
 
         # 5. Save answer to cache
         if answer:

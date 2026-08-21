@@ -176,6 +176,8 @@ def _render_badges(src, cache_hit, role):
         badge_color = "#3498DB"
     elif "+" in src:
         badge_color = "#9B59B6"
+    elif "Assistant" in src or "💬" in src or "👋" in src:
+        badge_color = "#00B3FF"
     else:
         badge_color = "#888888"
 

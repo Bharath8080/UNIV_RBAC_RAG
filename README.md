@@ -1,43 +1,55 @@
-# 🏛️ University RBAC Hybrid RAG
+# 🏛️ University Multi-Tenant RBAC Hybrid RAG & SQL Intelligence Platform
 
-A multi-tenant intelligence platform combining **Text-to-SQL**, **Hybrid RAG**, and **Semantic Caching** under **Role-Based Access Control (RBAC)**.
+A production-grade multi-tenant intelligence platform combining **Text-to-SQL**, **Cloud-Native Hybrid RAG (Dense + Sparse)**, **3-Layer Security Guardrails**, **Semantic Caching**, and **Cloud Disaster Recovery** under strict **Role-Based Access Control (RBAC)**.
 
 ---
 
 ## 🌟 System Architecture Overview
 
 ```
-                            ┌──────────────────────────────────────────────┐
-                            │    Streamlit Web UI (5 Role Portals)         │
-                            └──────────────────────┬───────────────────────┘
-                                                   │ HTTP POST {question, role, thread_id}
-                                                   ▼
-                            ┌──────────────────────────────────────────────┐
-                            │       FastAPI Backend API (main.py)          │
-                            └──────────────────────┬───────────────────────┘
-                                                   │
-                                                   ▼
-                            ┌──────────────────────────────────────────────┐
-                            │  ⚡ Semantic Cache (BGE-Small, Cosine >= 0.85)│ ──(HIT <5ms)──► Fast Cache Return
-                            └──────────────────────┬───────────────────────┘
-                                                   │ (MISS)
-                                                   ▼
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│  LangGraph ReAct Agent (Role-Scoped Execution)  ◄───►  🧠 Short-Term Memory (MemorySaver: thread_id)   │
-└───────────────────────────────────┬──────────────────────────────────────┬─────────────────────────────┘
-                                    │                                      │
-                                    ▼                                      ▼
-     ┌──────────────────────────────────────────────┐       ┌──────────────────────────────────────────────┐
-     │ 🗄️ Text-to-SQL Engine (Role-Isolated Views)   │       │ 📄 Hybrid RAG Engine (Cohere + BM25 + Jina)  │
-     │ • students_public / faculty / advisor / dean │       │ 1. Decompose Query ➔ 2. Cohere v4 + BM25     │
-     │ • Read-Only Schema Protection & Execution    │       │ 3. Qdrant metadata.tier filter ➔ 4. Rerank   │
-     └──────────────────────┬───────────────────────┘       └──────────────────────┬───────────────────────┘
-                            │                                                      │
-                            └──────────────────────────┬───────────────────────────┘
-                                                       ▼
-                            ┌──────────────────────────────────────────────┐
-                            │  Qwen 3.6 27B Synthesis (Grounded + Badged)  │ ──► Store Cache & Return
-                            └──────────────────────────────────────────────┘
+                            ┌────────────────────────────────────────────────────────┐
+                            │      Streamlit Multi-Tenant Web UI (5 Role Portals)    │
+                            └───────────────────────────┬────────────────────────────┘
+                                                        │ HTTP POST {question, role, thread_id}
+                                                        ▼
+                            ┌────────────────────────────────────────────────────────┐
+                            │           FastAPI High-Concurrency Backend             │
+                            │  • Non-blocking multi-threaded worker pool (def)       │
+                            │  • BackgroundTasks for PDF ingestion (HTTP 202 + UUID) │
+                            └───────────────────────────┬────────────────────────────┘
+                                                        │
+                                                        ▼
+                            ┌────────────────────────────────────────────────────────┐
+                            │        🛡️ 3-Layer Security Guardrails (guardrails.py)  │
+                            │  1. Prompt Injection & Length Guard (Regex, <1ms)      │
+                            │  2. Dynamic Safety, Toxicity & Domain Guard (Fast LLM) │
+                            └───────────────────────────┬────────────────────────────┘
+                                                        │ (Passes Guardrails)
+                                                        ▼
+                            ┌────────────────────────────────────────────────────────┐
+                            │    ⚡ In-Memory Semantic Cache (Cosine Sim >= 0.85)    │ ──(HIT <5ms)──► Fast Cache Return
+                            └───────────────────────────┬────────────────────────────┘
+                                                        │ (Cache MISS)
+                                                        ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  LangGraph ReAct Agent (Role-Scoped Context)  ◄───────►  🧠 Short-Term Session Memory (MemorySaver: thread_id)   │
+└───────────────────────┬──────────────────────────────────────────────────────┬───────────────────────────────────┘
+                        │                                                      │
+                        ▼                                                      ▼
+     ┌──────────────────────────────────────────────┐       ┌──────────────────────────────────────────────────┐
+     │ 🗄️ Text-to-SQL Engine (Role-Isolated Views)   │       │ 📄 Hybrid RAG Engine (Cohere + BM25 + Jina Rerank│
+     │ • students_public / faculty / advisor / dean │       │ 1. LLM Query Decomposition (2-3 sub-queries)     │
+     │ • Read-Only SQLite Schema Enforcement        │       │ 2. Qdrant Cloud Hybrid Search (Payload Filtering)│
+     │ • 100% Column & Table Level Shielding        │       │ 3. Jina AI Cross-Encoder Reranker (top_n=6)      │
+     └──────────────────────┬───────────────────────┘       └──────────────────────────┬───────────────────────┘
+                            │                                                          │
+                            └───────────────────────────┬──────────────────────────────┘
+                                                        ▼
+                            ┌────────────────────────────────────────────────────────┐
+                            │      LLM Answer Synthesis & Output Guardrail Check     │ ──► Store Cache & Return
+                            │  • Grounded answers with exact citations               │
+                            │  • Guardrail 3: Hallucination & ungrounded flag check  │
+                            └────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -50,16 +62,38 @@ A multi-tenant intelligence platform combining **Text-to-SQL**, **Hybrid RAG**, 
 | **👨‍🏫 Faculty Portal** | `faculty` | `faculty123` | Student grades, CGPA, backlogs, course syllabi, lesson plans & rubrics. |
 | **🧭 Advisor Portal** | `advisor` | `advisor123` | Tuition fees, attendance audits, scholarships & academic standing. |
 | **🏛️ Dean Portal** | `dean` | `dean123` | Full student DB, active disciplinary flags, strategic plans & tenure records. |
-| **⚙️ Admin Portal** | `admin` | `admin123` | **Vector DB Management**: Live document inventory, tier ingestion & deletion. |
+| **⚙️ Admin Portal** | `admin` | `admin123` | **Vector DB Management**: Live document inventory, tier ingestion (HTTP 202) & deletion. |
 
 ### 1. Structured Database Partitioning (SQLite)
-* **`students_public`**: Non-sensitive enrollment (`pin_number`, `branch`, `semester`, `placement_package_lpa`).
+* **`students_public`**: Non-sensitive enrollment (`pin_number`, `branch`, `semester`, `hall_ticket_status`, `placed_company`, `placement_package_lpa`).
 * **`students_faculty`**: Adds academic standing (`student_name`, `cgpa`, `active_backlogs`, `attendance_percentage`).
 * **`students_advisor`**: Adds financial & scholarship audits (`tuition_fee_due`, `scholarship_type`).
 * **`students_dean`**: Full institutional governance including `disciplinary_flag` (1 = flagged, 0 = clean).
 
-### 2. Unstructured Document Partitioning (Qdrant Payload Filtering)
-Document chunks are tagged with `metadata.tier` (`public` ⊂ `faculty` ⊂ `advisor` ⊂ `dean`) and strictly filtered before retrieval.
+### 2. Unstructured Document Partitioning (Qdrant Cloud Payload Filtering)
+12 institutional PDFs across 4 tiers are indexed with `metadata.tier` (`public` ⊂ `faculty` ⊂ `advisor` ⊂ `dean`) and `metadata.source_doc` payload indexes. Queries execute strict server-side payload condition filtering before vector similarity scoring.
+
+---
+
+## 🔒 3-Layer Security Guardrails (`src/guardrails.py`)
+
+1. **Layer 1: Prompt Injection & Length Defense (<1ms)**
+   - Regex-based filter intercepting system overrides, jailbreak phrases (e.g. `ignore previous instructions`, `DAN mode`, `developer mode`), and query lengths > 500 characters.
+   - Intercepts threats before touching vector store, database, or agent memory.
+2. **Layer 2: Dynamic LLM Safety, Toxicity & Domain Relevance**
+   - Context-aware classifier ensuring questions are safe, non-toxic, free of harassment, and related to university operations.
+   - Dynamically allows legitimate student inquiries (placements, packages, fees, policies) while blocking malicious requests.
+3. **Layer 3: Output Hallucination & Grounding Guard**
+   - Scans generated answers against retrieved documents. If no supporting documents exist or confidence is low, sets `low_confidence: True` and prevents caching.
+
+---
+
+## ☁️ Cloud Vector Storage & Keep-Alive
+
+* **Qdrant Cloud**: Managed cloud cluster using Cohere `embed-v4.0` (1536-dim) dense vectors + FastEmbed BM25 sparse vectors with server-side payload indexing.
+* **24/7 Keep-Alive Automation**:
+  - **Primary**: `cron-job.org` webhook pinging Qdrant Cloud every 15 minutes to prevent 7-day inactivity suspension.
+  - **Backup**: GitHub Actions Workflow (`.github/workflows/qdrant_keepalive.yml`) executing twice daily.
 
 ---
 
@@ -91,27 +125,6 @@ uv run python test/cache.py
 
 ### 🚀 3. DeepEval RAG Benchmarks (50 Test Cases)
 
-<div align="center">
-  <img src="assets/cohere_cli.png" alt="DeepEval Benchmark Aggregate Metrics (Cohere embed-v4.0 + BM25 + Qwen 3.6 27B)" width="850"/>
-</div>
-
-#### 📈 Retrieval Architecture Progression (72% ➔ 92% SOTA):
-
-| Stage & Optimization | Pass Rate | Faithfulness | Relevancy | Precision | Recall | Snapshot |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1. Dense Semantic Baseline** | 72% (36/50) | 0.99 | 0.97 | 0.85 | 0.95 | [CLI](assets/dense_cli.png) |
-| **2. + Hybrid (BGE-Small + Sparse)** | 78% (39/50) | 0.96 | 0.98 | 0.94 | 0.95 | [CLI](assets/hybrid_cli.png) |
-| **3. + Cross-Encoder Rerank** | 84% (42/50) | 0.96 | 0.97 | 0.97 | 0.95 | [CLI](assets/rerank_cli.png) |
-| **4. + Query Decomposition & CoT** | 86% (43/50) | 0.99 | 0.95 | 0.97 | 0.95 | [CLI](assets/decomp_cli.png) |
-| **5. + Jina Rerank v3.5 + BM42** | 88% (44/50) | 0.99 | 0.97 | 0.96 | 0.97 | [CLI](assets/jina_cli.png) |
-| **6. + Cohere embed-v4.0 + BM25 + k=15** | **92.0% (46/50)** 🚀 | **1.00** | **0.98** | **0.95** | **0.97** | [CLI](assets/cohere_cli.png) |
-
-#### ⚡ Model Optimization & Compute Strategy:
-* **Dense Embedding Upgrade (Cohere `embed-v4.0` — 1536-dim):** Upgraded from local BGE-small to cloud-hosted Cohere embed-v4.0 API. This completely offloads heavy in-process neural weights, freeing ~100MB+ RAM and preventing container OOM crashes.
-* **Sparse Embedding Simplification (`Qdrant/bm25` — ~5 MB):** Downgraded from heavy neural models (`SPLADE` ~532MB, `BM42` ~90MB) back to pure mathematical **BM25**. Because Cohere embed-v4 provides deep semantic understanding, BM25 provides exact keyword matching with near-zero memory footprint and zero cold-start model downloads.
-* **Candidate Pool Window Expansion (`k=15`):** Increased initial retrieval fetch window from `k=4` to `k=15` (`RERANK_FETCH_K`) before Jina v3.5 cross-encoder reranking (`top_n=6`), ensuring multi-part and multi-page document context is fully captured without truncating answers.
-
-#### 🎯 Production Aggregate Metrics:
 | Metric | Average Score | Pass Rate | Result |
 | :--- | :---: | :---: | :--- |
 | **Faithfulness** | **1.00** | **100.00%** (50/50) | 🏆 Flawless factual grounding (zero hallucinations) |
@@ -122,29 +135,38 @@ uv run python test/cache.py
 * **Overall Pass Rate:** **92.0% (46/50 passed all 4 criteria)** 🏆
 * **RBAC Isolation:** **36/36 checks passed (100% Enforced)** 🔒
 
+```powershell
+uv run python test/eval.py
+```
+
 ---
 
 ## 📁 Repository Structure
 
 ```
 RAG/
-├── assets/                 # Evaluation screenshots and diagrams (bm42.png)
-├── data/                   # 200 student records (students.csv, students.db) & tier PDFs
-├── qdrant_db/              # Local Qdrant hybrid vector store (Cohere + BM25)
+├── .github/
+│   └── workflows/
+│       └── qdrant_keepalive.yml # Automated twice-daily GitHub Action keep-alive
+├── assets/                 # Evaluation screenshots and diagrams
+├── data/                   # 200 student records (students.csv, students.db) & 12 tier PDFs
+├── frontend/
+│   └── app.py              # Streamlit Multi-Tenant Frontend (5 Role Portals)
 ├── src/
-│   ├── admin.py            # Admin vector database management (list, ingest, delete)
+│   ├── admin.py            # Vector DB management (list, ingest, delete)
 │   ├── cache.py            # In-memory semantic cache (BGE-small + Qdrant)
-│   ├── config.py           # Model configs (Qwen 27B, Cohere v4, BM25, Jina v3.5)
+│   ├── config.py           # Model configs (Groq, Cohere, Jina, Qdrant Cloud, R2)
 │   ├── db.py               # SQLite initialization & 4 role schemas
-│   ├── graph_router.py     # LangGraph ReAct agent + MemorySaver + SQL tools
-│   ├── ingester.py         # Recursive PDF loader with RBAC tier tagging
+│   ├── graph_router.py     # LangGraph ReAct agent + MemorySaver + SQL & Greeting tools
+│   ├── guardrails.py       # 3-Layer Security Guardrails (Injection, Safety, Hallucination)
+│   ├── ingester.py         # Multi-tier PDF parser & Qdrant Cloud indexer
 │   ├── observability.py    # Native LangSmith tracing
-│   ├── rag_engine.py       # Multi-stage RAG (Decompose ➔ Hybrid ➔ Jina Rerank)
+│   ├── prompts.py          # Centralized prompts (Agent, RAG, SQL, Guardrails)
+│   ├── rag_engine.py       # Query Decomposition ➔ Hybrid Search ➔ Jina Reranking
 │   └── retriever.py        # Role-filtered Qdrant vector store (Cohere + BM25)
 ├── test/                   # QA.json (50 cases), eval.py (DeepEval), cache.py, router.py
 ├── scripts/                # Synthetic student CSV & ReportLab PDF generators
-├── app.py                  # Streamlit Multi-Tenant Frontend (5 Role Portals)
-├── main.py                 # FastAPI High-Performance Backend REST API
+├── main.py                 # FastAPI High-Performance Backend API (Non-blocking worker pool)
 ├── pyproject.toml          # UV dependencies & project metadata
 └── README.md               # Project documentation & benchmark metrics
 ```
@@ -153,38 +175,56 @@ RAG/
 
 ## 🚀 Quickstart Guide
 
-### 1. Install & Configure
+### 1. Environment Setup
 ```powershell
+# Clone the repository
+git clone https://github.com/Bharath8080/UNIV_RBAC_RAG.git
+cd UNIV_RBAC_RAG
+
+# Install dependencies using uv
 uv sync
 ```
-Create `.env`:
+
+### 2. Configure Environment (`.env`)
+Create a `.env` file in the project root:
 ```env
+# LLM & Reasoning
 GROQ_API_KEY=your_groq_api_key
-GROQ_MODEL=qwen/qwen3.6-27b
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Embeddings & Reranking
 COHERE_API_KEY=your_cohere_api_key
 JINA_API_KEY=your_jina_api_key
-QDRANT_PATH=./qdrant_db
+
+# Qdrant Cloud Vector Database
+QDRANT_URL=https://your-cluster-id.us-west-1-0.aws.cloud.qdrant.io
+QDRANT_API_KEY=your_qdrant_api_key
 COLLECTION_NAME=univ_hybrid_rag
 ```
 
-### 2. Ingest Data & Run Benchmarks
+### 3. Ingest Documents into Qdrant Cloud
 ```powershell
-# Ingest 12 PDFs with Cohere embed-v4.0 + BM25
-uv run python -m src.ingester
+uv run python src/ingester.py
+```
 
-# Run benchmarks
+### 4. Run Benchmarks & Tests
+```powershell
 uv run python test/router.py   # Intent & SQL RBAC (100%)
 uv run python test/cache.py    # Semantic Cache (629x speedup)
-uv run python test/eval.py     # DeepEval 50 Questions (92% SOTA)
+uv run python test/eval.py 5   # DeepEval test run
 ```
 
-### 3. Launch Application
-```powershell
-# Terminal 1 (Backend):
-uv run python main.py
+### 5. Launch the Application
 
-# Terminal 2 (Frontend):
-uv run streamlit run app.py
-```
-Access the application at `http://localhost:8501`. 🎉
+* **Terminal 1 (FastAPI Backend)**:
+  ```powershell
+  uv run python main.py
+  ```
 
+* **Terminal 2 (Streamlit UI)**:
+  ```powershell
+  cd frontend
+  uv run streamlit run app.py
+  ```
+
+Access the web interface at `http://localhost:8501`. 🎉
