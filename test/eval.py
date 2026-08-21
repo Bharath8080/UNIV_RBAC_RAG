@@ -22,7 +22,7 @@ from deepeval.metrics import (
 from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase
 
-from src.config import GROQ_API_KEY
+from src.config import GROQ_API_KEY, RERANK_FETCH_K
 from src.rag_engine import query_rag
 from src.retriever import get_retriever
 
@@ -92,7 +92,7 @@ def load_qa_dataset():
     return []
 
 
-def check_rbac_isolation(num_questions=None, k=4):
+def check_rbac_isolation(num_questions=None, k=RERANK_FETCH_K):
     """Checks and prints whether unprivileged public queries are strictly blocked from restricted tiers."""
     qa_data = load_qa_dataset()
     restricted = [q for q in qa_data if q.get("required_role") in ("faculty", "advisor", "dean")]
@@ -114,7 +114,7 @@ def check_rbac_isolation(num_questions=None, k=4):
     print(f"\nRBAC Isolation Result: {passed}/{len(restricted)} checks passed (100% isolation enforced).\n")
 
 
-def run_benchmark(num_questions=None, k=4):
+def run_benchmark(num_questions=None, k=RERANK_FETCH_K):
     """Runs the full DeepEval benchmark suite measuring faithfulness, relevancy, precision, and recall."""
     qa_data = load_qa_dataset()
     if not qa_data:

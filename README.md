@@ -28,8 +28,8 @@ A multi-tenant intelligence platform combining **Text-to-SQL**, **Hybrid RAG**, 
                                     │                                      │
                                     ▼                                      ▼
      ┌──────────────────────────────────────────────┐       ┌──────────────────────────────────────────────┐
-     │ 🗄️ Text-to-SQL Engine (Role-Isolated Views)   │       │ 📄 Hybrid RAG Engine (Qdrant + Jina v3.5)     │
-     │ • students_public / faculty / advisor / dean │       │ 1. Decompose Query ➔ 2. BGE + BM42 Retrieval │
+     │ 🗄️ Text-to-SQL Engine (Role-Isolated Views)   │       │ 📄 Hybrid RAG Engine (Cohere + BM25 + Jina)  │
+     │ • students_public / faculty / advisor / dean │       │ 1. Decompose Query ➔ 2. Cohere v4 + BM25     │
      │ • Read-Only Schema Protection & Execution    │       │ 3. Qdrant metadata.tier filter ➔ 4. Rerank   │
      └──────────────────────┬───────────────────────┘       └──────────────────────┬───────────────────────┘
                             │                                                      │
@@ -92,10 +92,10 @@ uv run python test/cache.py
 ### 🚀 3. DeepEval RAG Benchmarks (50 Test Cases)
 
 <div align="center">
-  <img src="assets/bm42.png" alt="DeepEval Benchmark Aggregate Metrics (BM42 + Qwen 3.6 27B)" width="850"/>
+  <img src="assets/cohere_cli.png" alt="DeepEval Benchmark Aggregate Metrics (Cohere embed-v4.0 + BM25 + Qwen 3.6 27B)" width="850"/>
 </div>
 
-#### 📈 Retrieval Architecture Progression (72% ➔ 88% SOTA):
+#### 📈 Retrieval Architecture Progression (72% ➔ 92% SOTA):
 
 | Stage & Optimization | Pass Rate | Faithfulness | Relevancy | Precision | Recall | Snapshot |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -103,24 +103,23 @@ uv run python test/cache.py
 | **2. + Hybrid (BGE-Small + Sparse)** | 78% (39/50) | 0.96 | 0.98 | 0.94 | 0.95 | [CLI](assets/hybrid_cli.png) |
 | **3. + Cross-Encoder Rerank** | 84% (42/50) | 0.96 | 0.97 | 0.97 | 0.95 | [CLI](assets/rerank_cli.png) |
 | **4. + Query Decomposition & CoT** | 86% (43/50) | 0.99 | 0.95 | 0.97 | 0.95 | [CLI](assets/decomp_cli.png) |
-| **5. + Jina Rerank v3.5 + BM42** | **88% (44/50)** 🚀 | **0.99** | **0.97** | **0.96** | **0.97** | [CLI](assets/jina_cli.png) |
+| **5. + Jina Rerank v3.5 + BM42** | 88% (44/50) | 0.99 | 0.97 | 0.96 | 0.97 | [CLI](assets/jina_cli.png) |
+| **6. + Cohere embed-v4.0 + BM25 + k=15** | **92.0% (46/50)** 🚀 | **1.00** | **0.98** | **0.95** | **0.97** | [CLI](assets/cohere_cli.png) |
 
-#### ⚡ Sparse Model Efficiency & Trade-off Study:
-| Sparse Model | Size | Pass Rate | Key Takeaway |
-| :--- | :---: | :---: | :--- |
-| **SPLADE++ (`Splade_PP_en_v1`)** | ~532 MB 🐘 | **88.0%** (44/50) | High accuracy, heavy memory footprint. |
-| **BM25 (`Qdrant/bm25`)** | ~5 MB ⚡ | **82.0%** (41/50) | Ultra-light, but dropped 6% on semantic paraphrases. |
-| **BM42 (`bm42-all-minilm-l6-v2`)** | **~90 MB** ✅ | **88.0%** (44/50) 🚀 | **Production SOTA:** 6× lighter than SPLADE with full 88% accuracy. |
+#### ⚡ Model Optimization & Compute Strategy:
+* **Dense Embedding Upgrade (Cohere `embed-v4.0` — 1536-dim):** Upgraded from local BGE-small to cloud-hosted Cohere embed-v4.0 API. This completely offloads heavy in-process neural weights, freeing ~100MB+ RAM and preventing container OOM crashes.
+* **Sparse Embedding Simplification (`Qdrant/bm25` — ~5 MB):** Downgraded from heavy neural models (`SPLADE` ~532MB, `BM42` ~90MB) back to pure mathematical **BM25**. Because Cohere embed-v4 provides deep semantic understanding, BM25 provides exact keyword matching with near-zero memory footprint and zero cold-start model downloads.
+* **Candidate Pool Window Expansion (`k=15`):** Increased initial retrieval fetch window from `k=4` to `k=15` (`RERANK_FETCH_K`) before Jina v3.5 cross-encoder reranking (`top_n=6`), ensuring multi-part and multi-page document context is fully captured without truncating answers.
 
 #### 🎯 Production Aggregate Metrics:
 | Metric | Average Score | Pass Rate | Result |
 | :--- | :---: | :---: | :--- |
-| **Faithfulness** | **0.99** | **100.00%** (50/50) | 🟢 Flawless factual grounding (zero hallucinations) |
-| **Answer Relevancy** | **0.97** | **96.00%** (48/50) | 🟢 Direct, context-focused responses |
-| **Contextual Precision** | **0.96** | **98.00%** (49/50) | 🟢 Top-ranked ground truth chunk alignment |
-| **Contextual Recall** | **0.97** | **94.00%** (47/50) | 🟢 Full coverage of required domain context |
+| **Faithfulness** | **1.00** | **100.00%** (50/50) | 🏆 Flawless factual grounding (zero hallucinations) |
+| **Answer Relevancy** | **0.98** | **98.00%** (49/50) | 🟢 Direct, context-focused responses |
+| **Contextual Precision** | **0.95** | **98.00%** (49/50) | 🟢 Top-ranked ground truth chunk alignment |
+| **Contextual Recall** | **0.97** | **96.00%** (48/50) | 🟢 Full coverage of required domain context |
 
-* **Overall Pass Rate:** **88.0% (44/50 passed all 4 criteria)** 🚀
+* **Overall Pass Rate:** **92.0% (46/50 passed all 4 criteria)** 🏆
 * **RBAC Isolation:** **36/36 checks passed (100% Enforced)** 🔒
 
 ---
@@ -131,17 +130,17 @@ uv run python test/cache.py
 RAG/
 ├── assets/                 # Evaluation screenshots and diagrams (bm42.png)
 ├── data/                   # 200 student records (students.csv, students.db) & tier PDFs
-├── qdrant_db/              # Local Qdrant hybrid vector store (Dense + BM42)
+├── qdrant_db/              # Local Qdrant hybrid vector store (Cohere + BM25)
 ├── src/
 │   ├── admin.py            # Admin vector database management (list, ingest, delete)
 │   ├── cache.py            # In-memory semantic cache (BGE-small + Qdrant)
-│   ├── config.py           # Model configs (Qwen 27B, BM42, BGE-small, Jina v3.5)
+│   ├── config.py           # Model configs (Qwen 27B, Cohere v4, BM25, Jina v3.5)
 │   ├── db.py               # SQLite initialization & 4 role schemas
 │   ├── graph_router.py     # LangGraph ReAct agent + MemorySaver + SQL tools
 │   ├── ingester.py         # Recursive PDF loader with RBAC tier tagging
 │   ├── observability.py    # Native LangSmith tracing
 │   ├── rag_engine.py       # Multi-stage RAG (Decompose ➔ Hybrid ➔ Jina Rerank)
-│   └── retriever.py        # Role-filtered Qdrant vector store (Dense + BM42)
+│   └── retriever.py        # Role-filtered Qdrant vector store (Cohere + BM25)
 ├── test/                   # QA.json (50 cases), eval.py (DeepEval), cache.py, router.py
 ├── scripts/                # Synthetic student CSV & ReportLab PDF generators
 ├── app.py                  # Streamlit Multi-Tenant Frontend (5 Role Portals)
@@ -162,6 +161,7 @@ Create `.env`:
 ```env
 GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=qwen/qwen3.6-27b
+COHERE_API_KEY=your_cohere_api_key
 JINA_API_KEY=your_jina_api_key
 QDRANT_PATH=./qdrant_db
 COLLECTION_NAME=univ_hybrid_rag
@@ -169,13 +169,13 @@ COLLECTION_NAME=univ_hybrid_rag
 
 ### 2. Ingest Data & Run Benchmarks
 ```powershell
-# Ingest 12 PDFs with BM42 (~10s)
+# Ingest 12 PDFs with Cohere embed-v4.0 + BM25
 uv run python -m src.ingester
 
 # Run benchmarks
 uv run python test/router.py   # Intent & SQL RBAC (100%)
 uv run python test/cache.py    # Semantic Cache (629x speedup)
-uv run python test/eval.py     # DeepEval 50 Questions (88% SOTA)
+uv run python test/eval.py     # DeepEval 50 Questions (92% SOTA)
 ```
 
 ### 3. Launch Application

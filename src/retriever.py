@@ -1,11 +1,11 @@
-from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_cohere import CohereEmbeddings
 from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Distance, VectorParams, SparseVectorParams
 
-from src.config import QDRANT_PATH, COLLECTION_NAME, EMBED_MODEL, SPARSE_EMBED_MODEL, EMBED_DIM
+from src.config import QDRANT_PATH, COLLECTION_NAME, COHERE_API_KEY, COHERE_EMBED_MODEL, SPARSE_EMBED_MODEL, EMBED_DIM
 
-dense_embeddings = FastEmbedEmbeddings(model_name=EMBED_MODEL)
+dense_embeddings = CohereEmbeddings(cohere_api_key=COHERE_API_KEY, model=COHERE_EMBED_MODEL)
 sparse_embeddings = FastEmbedSparse(model_name=SPARSE_EMBED_MODEL)
 
 _qdrant_client = None
