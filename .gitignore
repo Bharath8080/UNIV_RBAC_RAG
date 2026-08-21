@@ -50,9 +50,8 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 
-# ── Vector DB & Local Storage (Tracked) ───────────────────────────────────────
-qdrant_db/**/.lock
-qdrant_db/.lock
+# ── Vector DB & Local Storage ───────────────────────────────────────────────────
+qdrant_db/
 *.lock
 
 # ── Logs & Debugging ─────────────────────────────────────────────────────────

@@ -3,7 +3,16 @@ from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Distance, VectorParams, SparseVectorParams
 
-from src.config import QDRANT_PATH, COLLECTION_NAME, COHERE_API_KEY, COHERE_EMBED_MODEL, SPARSE_EMBED_MODEL, EMBED_DIM
+from src.config import (
+    QDRANT_URL,
+    QDRANT_API_KEY,
+    QDRANT_PATH,
+    COLLECTION_NAME,
+    COHERE_API_KEY,
+    COHERE_EMBED_MODEL,
+    SPARSE_EMBED_MODEL,
+    EMBED_DIM,
+)
 
 dense_embeddings = CohereEmbeddings(cohere_api_key=COHERE_API_KEY, model=COHERE_EMBED_MODEL)
 sparse_embeddings = FastEmbedSparse(model_name=SPARSE_EMBED_MODEL)
@@ -12,10 +21,13 @@ _qdrant_client = None
 
 
 def get_qdrant_client():
-    # Return shared singleton QdrantClient connection
+    # Connect to Qdrant Cloud if credentials provided, else local embedded path
     global _qdrant_client
     if _qdrant_client is None:
-        _qdrant_client = QdrantClient(path=QDRANT_PATH)
+        if QDRANT_URL and QDRANT_API_KEY:
+            _qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+        else:
+            _qdrant_client = QdrantClient(path=QDRANT_PATH)
     return _qdrant_client
 
 
@@ -28,7 +40,7 @@ ROLE_TIER_MAPPING = {
 
 
 def get_vector_store():
-    # Create hybrid collection with dense + BM42 sparse vectors if not exists
+    # Create hybrid collection with dense + BM42 sparse vectors and payload indexes
     client = get_qdrant_client()
     if not client.collection_exists(COLLECTION_NAME):
         client.create_collection(
@@ -37,6 +49,16 @@ def get_vector_store():
             sparse_vectors_config={
                 "langchain-sparse": SparseVectorParams()
             },
+        )
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="metadata.tier",
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="metadata.source_doc",
+            field_schema=models.PayloadSchemaType.KEYWORD,
         )
 
     return QdrantVectorStore(

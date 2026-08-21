@@ -8,6 +8,8 @@ GROQ_MODEL      = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 JINA_API_KEY    = os.getenv("JINA_API_KEY", "")
 COHERE_API_KEY  = os.getenv("COHERE_API_KEY", "")
 HF_TOKEN        = os.getenv("HF_TOKEN", "")
+QDRANT_URL      = os.getenv("QDRANT_URL", "")
+QDRANT_API_KEY  = os.getenv("QDRANT_API_KEY", "")
 QDRANT_PATH     = os.getenv("QDRANT_PATH", "./qdrant_db")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "univ_hybrid_rag")
 
