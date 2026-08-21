@@ -40,11 +40,14 @@ def decompose_query(question):
     return sub_queries[:3]
 
 
+_http_session = requests.Session()
+
+
 def rerank_docs(question, docs, top_n=RERANK_TOP_N):
     # Score and re-rank candidate documents using Jina AI cross-encoder API
     if not docs:
         return docs
-    response = requests.post(
+    response = _http_session.post(
         "https://api.jina.ai/v1/rerank",
         headers={"Authorization": f"Bearer {JINA_API_KEY}", "Content-Type": "application/json"},
         json={

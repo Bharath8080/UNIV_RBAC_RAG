@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Literal
 
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -8,6 +9,9 @@ from pydantic import BaseModel, Field
 from src.cache import semantic_cache
 from src.db import init_db
 from src.graph_router import orchestrator
+
+
+RoleType = Literal["public", "faculty", "advisor", "dean"]
 
 
 @asynccontextmanager
@@ -40,8 +44,9 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, description="User question")
-    role: str = Field(..., description="RBAC role: public | faculty | advisor | dean")
+    role: RoleType = Field(..., description="RBAC role: public | faculty | advisor | dean")
     thread_id: str | None = Field(None, description="Conversation thread ID")
+
 
 
 class ChatResponse(BaseModel):
@@ -98,17 +103,11 @@ async def health_check():
 
 
 @app.post("/api/chat", response_model=ChatResponse, tags=["Chat"])
-async def chat(req: ChatRequest):
+def chat(req: ChatRequest):
     """
     Processes a user question through semantic caching, LangGraph agent routing, and memory.
     Returns a structured chat response containing the answer, role, and source badges.
     """
-    if req.role.lower() not in _VALID_ROLES:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid role '{req.role}'. Must be one of: {sorted(_VALID_ROLES)}",
-        )
-
     try:
         result = orchestrator.invoke(
             question=req.question,
@@ -131,7 +130,7 @@ async def chat(req: ChatRequest):
 
 
 @app.get("/api/admin/docs", response_model=list[DocEntry], tags=["Admin"])
-async def list_docs():
+def list_docs():
     """
     Retrieves all indexed PDF documents and their chunk counts from the vector store.
     Returns a list of document entries.
@@ -144,7 +143,7 @@ async def list_docs():
 
 
 @app.delete("/api/admin/docs", response_model=DeleteResponse, tags=["Admin"])
-async def delete_document(
+def delete_document(
     source_doc=Query(..., description="Document filename"),
     tier=Query(..., description="RBAC tier"),
 ):
@@ -165,7 +164,7 @@ async def delete_document(
 
 
 @app.post("/api/admin/docs", response_model=IngestResponse, tags=["Admin"])
-async def ingest_document(
+def ingest_document(
     file: UploadFile = File(..., description="PDF file to ingest"),
     tier=Form(..., description="RBAC tier"),
 ):
@@ -184,7 +183,7 @@ async def ingest_document(
 
     from src.admin import ingest_uploaded_pdf
     try:
-        content = await file.read()
+        content = file.file.read()
         chunk_count = ingest_uploaded_pdf(content, file.filename, tier.lower())
         return IngestResponse(
             filename=file.filename,
@@ -197,7 +196,7 @@ async def ingest_document(
 
 
 @app.post("/api/cache/reset", response_model=CacheResetResponse, tags=["System"])
-async def reset_cache():
+def reset_cache():
     """
     Flushes all entries stored inside the in-memory semantic cache.
     Returns a confirmation message indicating the cache was cleared.
